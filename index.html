@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CertChain — Certificazione Competenze</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <span class="logo-mark">◈</span>
+      <span class="logo-text">CertChain</span>
+    </div>
+    <div class="nav-links">
+      <a href="#come-funziona">Come funziona</a>
+      <a href="#accesso" class="btn-nav">Accedi</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-label">Università Politecnica delle Marche · A.A. 2025–2026</div>
+    <h1 class="hero-title">
+      Certificazione<br>
+      <span class="accent">on-chain</span><br>
+      delle competenze
+    </h1>
+    <p class="hero-sub">
+      Un oracolo bayesiano ibrido che valuta e certifica
+      le competenze degli studenti sulla blockchain Hyperledger Besu.
+    </p>
+    <div class="hero-actions">
+      <a href="#accesso" class="btn-primary">Inizia ora</a>
+      <a href="#come-funziona" class="btn-ghost">Scopri di più →</a>
+    </div>
+
+    <!-- Chip tecnici -->
+    <div class="tech-chips">
+      <span class="chip">Solidity</span>
+      <span class="chip">Django</span>
+      <span class="chip">Hyperledger Besu</span>
+      <span class="chip">Bayesian Network</span>
+      <span class="chip">OpenZeppelin</span>
+    </div>
+  </section>
+
+  <!-- SEPARATORE -->
+  <div class="divider"></div>
+
+  <!-- COME FUNZIONA -->
+  <section class="section" id="come-funziona">
+    <div class="section-label">Come funziona</div>
+    <h2 class="section-title">Tre passi per certificare una competenza</h2>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-number">01</div>
+        <div class="step-content">
+          <h3>Inserisci le evidenze</h3>
+          <p>
+            Carica le tue certificazioni, esami universitari e corsi completati.
+            Il sistema raccoglie le evidenze osservabili della tua competenza.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-connector"></div>
+
+      <div class="step">
+        <div class="step-number">02</div>
+        <div class="step-content">
+          <h3>Inferenza bayesiana</h3>
+          <p>
+            La rete bayesiana on-chain calcola la probabilità posteriore
+            che tu abbia acquisito le conoscenze di base, condizionata
+            alle evidenze osservate.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-connector"></div>
+
+      <div class="step">
+        <div class="step-number">03</div>
+        <div class="step-content">
+          <h3>Certificazione immutabile</h3>
+          <p>
+            Il risultato viene registrato sulla blockchain Hyperledger Besu.
+            Chiunque può verificare l'autenticità della certificazione
+            in qualsiasi momento.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SEPARATORE -->
+  <div class="divider"></div>
+
+  <!-- RUOLI / ACCESSO -->
+  <section class="section" id="accesso">
+    <div class="section-label">Accesso al sistema</div>
+    <h2 class="section-title">Scegli il tuo ruolo</h2>
+
+    <div class="roles">
+
+      <div class="role-card">
+        <div class="role-icon">◎</div>
+        <h3>Studente</h3>
+        <p>Visualizza la tua probabilità di competenza, inserisci le evidenze e consulta le certificazioni ottenute.</p>
+        <a href="{% url 'login' %}" class="btn-card">Accedi come Studente</a>
+      </div>
+
+      <div class="role-card">
+        <div class="role-icon">◉</div>
+        <h3>Ente Certificatore</h3>
+        <p>Emetti e gestisci le certificazioni. Sottometti le evidenze verificate allo smart contract.</p>
+        <a href="{% url 'login' %}" class="btn-card">Accedi come Ente</a>
+      </div>
+
+      <div class="role-card role-card--admin">
+        <div class="role-icon">⬡</div>
+        <h3>Amministratore</h3>
+        <p>Inizializza la rete bayesiana, gestisci le probabilità a priori e monitora il sistema.</p>
+        <a href="{% url 'login' %}" class="btn-card">Accedi come Admin</a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="logo-mark">◈</span>
+      <span class="logo-text">CertChain</span>
+    </div>
+    <div class="footer-center">
+      Progetto di Software Security and Blockchain · UNIVPM · 2025–2026
+    </div>
+    <div class="footer-right">
+      <span class="chip chip--small">Hyperledger Besu</span>
+    </div>
+  </footer>
+
+</body>
+</html>
