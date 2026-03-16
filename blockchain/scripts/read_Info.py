@@ -6,9 +6,7 @@ from brownie import Contract_bn,accounts,config
 
 def read_contract():
 
-
     fattore=1000
-
 
     #Mapping per associare ciascun indice a un Evidence
     #Evidences_dict = {
@@ -35,15 +33,6 @@ def read_contract():
         except ValueError:
             print("ERRORE: input non numerico")
 
-
-
-
-
-
-
-
-
-
     print("Probabilità(CONOSCENZE)")
     for numero, fatto in Facts_dict.items():
         print(f"{numero}) {fatto}")
@@ -63,10 +52,6 @@ def read_contract():
         except ValueError:
             print("ERRORE: input non numerico")
 
-
-       
-
-
     #print("\nProbabilità(EVIDENZE | CONOSCENZE)")
     #for numero, evidenza in Evidences_dict.items():
         #print(f"{numero}) {evidenza}")
@@ -84,13 +69,9 @@ def read_contract():
         #except ValueError:
            # print("ERRORE: input non numerico")
 
-
-
-
     print("\nProbabilità(CONOSCENZE | EVIDENZE osservate)")
     for numero, fatto in Facts_dict.items():
             print(f"{numero}) {fatto}")
-
 
     while True:
         try:
@@ -103,10 +84,6 @@ def read_contract():
                 print(f"ERRORE: Inserisci un numero tra 1 e {len(Facts_dict)}")
         except ValueError:
             print("ERRORE: input non numerico")
-
-
-
-
    
 def main():
     read_contract()
