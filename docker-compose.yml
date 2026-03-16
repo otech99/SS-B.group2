@@ -1,0 +1,46 @@
+services:
+
+  # ── Django backend ──────────────────────────────────────────
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: certchain_django
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - certchain_net
+    restart: unless-stopped
+
+  # ── Hyperledger Besu (nodo privato) ─────────────────────────
+  # besu: commentato fino a configurazione genesis.json
+  # besu:
+  #   image: hyperledger/besu:latest
+  #   container_name: certchain_besu
+  #   ports:
+  #     - "8545:8545"
+  #     - "8546:8546"
+  #     - "30303:30303"
+  #   volumes:
+  #     - ./blockchain/besu-config:/config
+  #     - besu_data:/data
+  #   command: >
+  #     --config-file=/config/config.toml
+  #     --data-path=/data
+  #     --rpc-http-enabled
+  #     --rpc-http-host=0.0.0.0
+  #     --rpc-http-port=8545
+  #     --rpc-http-cors-origins=*
+  #     --rpc-http-api=ETH,NET,WEB3,TXPOOL
+  #     --host-allowlist=*
+  #     --network-id=1337
+  #   networks:
+  #     - certchain_net
+  #   restart: unless-stopped
+networks:
+  certchain_net:
+    driver: bridge
+
+
