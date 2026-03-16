@@ -25,6 +25,9 @@ def deploy_and_set_values():
         1: True,
     }
 
+    corso = input('inserisci nome del corso :')
+    competenza = input('competenze che verifica :')
+
 
     IDCERTprob_struct=()
     for j in range(0,2):
