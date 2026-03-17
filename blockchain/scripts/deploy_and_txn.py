@@ -20,74 +20,41 @@ def deploy_and_set_values():
         1: True,
     }
 
+    mapping_evidence={
+        0: "IDCERT Coding",
+        1: "Corso Python",
+        2: "Fondamenti di Info",
+        3: "Ingegneria del Soft"
+    }
+
     IDCERTprob_struct=()
-    for j in range(0,2):
-        for k in range(0,2):
-           while True:
-                try:
-                    IDCERTprob = float(input(f"P(IDCERT Coding=True | BP={mapping_bits[j]}, PP={mapping_bits[k]}): "))
-                    if 0 <= IDCERTprob <= 1:
-                        # Moltiplica e casta a int per sicurezza prima di inviare a Solidity
-                        IDCERTprob_struct += (int(IDCERTprob * Fattore),)
-                        break
-                    else:
-                        print("ERRORE: probabilità fuori range")
-                except ValueError:
-                    print("ERRORE: input non numerico")
-
-    
-    
     CorsoPyprob_struct=()
-    for j in range(0,2):
-        for k in range(0,2):
-            while True:
-                try:
-                    CorsoPyprob = float(input(f"P(Corso Python=True | BP={mapping_bits[j]}, PP={mapping_bits[k]}): "))
-                    if 0 <= CorsoPyprob <= 1:
-                        # Moltiplica e casta a int per sicurezza prima di inviare a Solidity
-                        CorsoPyprob_struct += (int(CorsoPyprob * Fattore),)
-                        break
-                    else:
-                        print("ERRORE: probabilità fuori range")
-                except ValueError:
-                    print("ERRORE: input non numerico")
-
-
-
     FondInfoprob_struct=()
-    for j in range(0,2):
-        for k in range(0,2):
-            while True:
-                try:
-                    FondInfoprob = float(input(f"P(Fondamenti di Info=True | BP={mapping_bits[j]}, PP={mapping_bits[k]}): "))
-                    if 0 <= FondInfoprob <= 1:
-                        # Moltiplica e casta a int per sicurezza prima di inviare a Solidity
-                        FondInfoprob_struct += (int(FondInfoprob * Fattore),)
-                        break
-                    else:
-                        print("ERRORE: probabilità fuori range")
-                except ValueError:
-                    print("ERRORE: input non numerico")
-          
-
-    
     IngSoftprob_struct=()
-    for j in range(0,2):
-        for k in range(0,2):
-             while True:
-                try:
-                    IngSoftprob = float(input(f"P(Ingegneria del Soft=True | BP={mapping_bits[j]}, PP={mapping_bits[k]}): "))
-                    if 0 <= IngSoftprob <= 1:
-                        # Moltiplica e casta a int per sicurezza prima di inviare a Solidity
-                        IngSoftprob_struct += (int(IngSoftprob * Fattore),)
-                        break
-                    else:
-                        print("ERRORE: probabilità fuori range")
-                except ValueError:
-                    print("ERRORE: input non numerico")
 
+    for i in range(len(mapping_evidence)): 
+        for j in range(0,2):
+            for k in range(0,2):
+                while True:
+                        try:
+                            prob_evidence = float(input(f"P({mapping_evidence[i]}=True | BP={mapping_bits[j]}, PP={mapping_bits[k]}): "))
+                            if 0 <= prob_evidence <= 1:
+                                if i==0:
+                                    IDCERTprob_struct += (int(prob_evidence * Fattore),)
+                                elif i==1:
+                                    CorsoPyprob_struct += (int(prob_evidence * Fattore),)
+                                elif i==2:
+                                    FondInfoprob_struct += (int(prob_evidence * Fattore),)
+                                elif i==3:
+                                    IngSoftprob_struct += (int(prob_evidence * Fattore),)
+                                break
+                            else:
+                                print("ERRORE: probabilità fuori range")
+                        except ValueError:
+                            print("ERRORE: input non numerico")
+    
+    
 
-     
     while True:
         try:
             BasiProgprob = float(input("P(Basi di Programmazione=True): "))
