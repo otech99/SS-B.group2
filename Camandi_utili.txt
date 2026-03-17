@@ -1,0 +1,2 @@
+1) Pipx install eth-brownie (per configurare il framework brownie) 
+2) brownie bake  chainlink-mix (per usare il modello di progetto preconfigurato per brownie)

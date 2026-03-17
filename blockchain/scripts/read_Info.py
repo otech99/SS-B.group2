@@ -1,8 +1,6 @@
 from brownie import Contract_bn,accounts,config
 
-
 #3) brownie run scripts/read_Info.py --network ganache-gui per eseguire lo script da ganache
-
 
 def read_contract():
 
@@ -16,27 +14,28 @@ def read_contract():
         #4:"Ingegneria del Soft"
     #}
 
-
     Facts_dict ={1:"Basi di Programmazione"
                  ,2:"Programmazione Python"}
-
 
     while True:
         try:
             i = int(input("Scegli un contratto: "))
             if i >= 1 :
                 contract_bn = Contract_bn[i-1]
-                break
+                break 
             else:
                 print(f"ERRORE: Inserisci un numero >= 1")
-           
+            
         except ValueError:
             print("ERRORE: input non numerico")
+
+
+
+
 
     print("Probabilità(CONOSCENZE)")
     for numero, fatto in Facts_dict.items():
         print(f"{numero}) {fatto}")
-
 
     while True:
         try:
@@ -45,17 +44,17 @@ def read_contract():
                 risultato=contract_bn.get_apriorInfoFacts(Fact)
                 print(risultato/fattore)
 
-
                 break
             else:
                 print(f"ERRORE: Inserisci un numero tra 1 e {len(Facts_dict)}")
         except ValueError:
             print("ERRORE: input non numerico")
 
+        
+
     #print("\nProbabilità(EVIDENZE | CONOSCENZE)")
     #for numero, evidenza in Evidences_dict.items():
         #print(f"{numero}) {evidenza}")
-
 
     #while True:
         #try:
@@ -68,6 +67,7 @@ def read_contract():
                 #print(f"ERRORE: Inserisci un numero tra 1 e {len(Evidences_dict)}")
         #except ValueError:
            # print("ERRORE: input non numerico")
+
 
     print("\nProbabilità(CONOSCENZE | EVIDENZE osservate)")
     for numero, fatto in Facts_dict.items():
@@ -84,8 +84,8 @@ def read_contract():
                 print(f"ERRORE: Inserisci un numero tra 1 e {len(Facts_dict)}")
         except ValueError:
             print("ERRORE: input non numerico")
-   
+
+
+    
 def main():
     read_contract()
-
-
