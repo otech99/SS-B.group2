@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verifica OTP — CertChain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="{% url 'home' %}" class="nav-logo" style="text-decoration:none;">
+      <span class="logo-mark">◈</span>
+      <span class="logo-text">CertChain</span>
+    </a>
+  </nav>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="section-label">Verifica identità</div>
+      <h1 class="login-title">Inserisci il codice</h1>
+      <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+        Abbiamo inviato un codice di 6 cifre alla tua email. Scade tra 5 minuti.
+      </p>
+
+      {% if error %}
+      <div class="alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" class="login-form">
+        {% csrf_token %}
+        <div class="field">
+          <label for="otp">Codice OTP</label>
+          <input type="text" id="otp" name="otp"
+                 placeholder="000000"
+                 maxlength="6"
+                 style="letter-spacing:0.3em; text-align:center; font-family:var(--font-mono); font-size:1.2rem;"
+                 required autofocus/>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Verifica</button>
+      </form>
+
+      <p class="login-back">
+        <a href="{% url 'login' %}">← Torna al login</a>
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>
