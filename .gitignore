@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+
+# Django
+data/db.sqlite3
+*.log
+
+# Brownie
+blockchain/build/
+.brownie/
+
+# Docker
+.env
+
+# OS
+.DS_Store
+__init__.py
