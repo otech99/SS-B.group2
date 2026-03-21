@@ -153,3 +153,44 @@ def dashboard_student(request):
         'user': request.user,
         'token': request.session.get('access_token', ''),
     })
+
+
+@login_required
+def init_bn(request):
+    if not request.user.is_admin():
+        return redirect('home')
+    if request.method == 'POST':
+        cpt_data = {
+            "priori": {
+                "BasiProg": float(request.POST.get('basi_prog')),
+                "ProgPy":   float(request.POST.get('prog_py')),
+            },
+            "IDCERT":    {"FF": float(request.POST.get('idcert_ff')),    "FT": float(request.POST.get('idcert_ft')),    "TF": float(request.POST.get('idcert_tf')),    "TT": float(request.POST.get('idcert_tt'))},
+            "CorsoPy":   {"FF": float(request.POST.get('corsopy_ff')),   "FT": float(request.POST.get('corsopy_ft')),   "TF": float(request.POST.get('corsopy_tf')),   "TT": float(request.POST.get('corsopy_tt'))},
+            "FondInfo":  {"FF": float(request.POST.get('fondinfo_ff')),  "FT": float(request.POST.get('fondinfo_ft')),  "TF": float(request.POST.get('fondinfo_tf')),  "TT": float(request.POST.get('fondinfo_tt'))},
+            "IngSoft":   {"FF": float(request.POST.get('ingsoft_ff')),   "FT": float(request.POST.get('ingsoft_ft')),   "TF": float(request.POST.get('ingsoft_tf')),   "TT": float(request.POST.get('ingsoft_tt'))},
+        }
+        json_path = os.path.join(settings.BASE_DIR, 'data', 'json', 'cpt.json')
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        with open(json_path, 'w') as f:
+            json.dump(cpt_data, f, indent=2)
+        messages.success(request, 'Rete Bayesiana inizializzata con successo.')
+    return redirect('dashboard_admin')
+
+
+@login_required
+def create_user(request):
+    if not request.user.is_admin():
+        return redirect('home')
+    if request.method == 'POST':
+        from .models import CustomUser
+        username = request.POST.get('username')
+        email    = request.POST.get('email')
+        password = request.POST.get('password')
+        role     = request.POST.get('role')
+        if CustomUser.objects.filter(username=username).exists():
+            messages.error(request, f'Username "{username}" già esistente.')
+        else:
+            CustomUser.objects.create_user(username=username, email=email, password=password, role=role)
+            messages.success(request, f'Utente "{username}" creato con ruolo {role}.')
+    return redirect('dashboard_admin')
