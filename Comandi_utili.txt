@@ -1,0 +1,4 @@
+1) python -m pip install --user pipx
+2) python -m pipx ensurepath
+3) python -m pipx install eth-brownie
+4) npm install @openzeppelin/contracts
