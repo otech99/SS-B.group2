@@ -2,33 +2,38 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard — CertChain</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+    <meta charset="UTF-8">
+    <title>Ente Certificatore — CertChain</title>
+    <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
 </head>
-<body>
+<body class="dashboard-body">
+    <nav class="navbar">
+        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
+        <div class="nav-user"><span>{{ user.username }} (Authority)</span></div>
+    </nav>
 
-  <nav class="navbar">
-    <div class="nav-logo">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">CertChain</span>
-    </div>
-    <div class="nav-links">
-      <span style="font-size:0.85rem; color:var(--text-secondary);">{{ user.username }}</span>
-      <a href="{% url 'logout' %}" class="btn-nav">Esci</a>
-    </div>
-  </nav>
-
-  <section class="section">
-    <div class="section-label">Dashboard</div>
-    <h1 class="hero-title" style="font-size:2rem;">Benvenuto, {{ user.username }}</h1>
-    <p style="color:var(--text-secondary); margin-top:1rem;">
-      Questa è la tua dashboard. I contenuti verranno aggiunti nelle prossime sessioni.
-    </p>
-  </section>
-
+    <main class="main-content" style="margin-left:0; padding: 40px 10%;">
+        <h2 class="section-title">Evidenze in attesa di Verifica</h2>
+        <div class="card">
+            <table class="verification-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Evidenze Dichiarate</th>
+                        <th>Data</th>
+                        <th>Azione</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-mono">studente_01</td>
+                        <td>IDCERT, Fondamenti Info</td>
+                        <td>21/03/2026</td>
+                        <td><button class="btn-verify">Verifica e Certifica</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
 </body>
 </html>

@@ -2,311 +2,82 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Admin — CertChain</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'certchain/css/dashboard.css' %}">
+    <meta charset="UTF-8">
+    <title>Admin Dashboard — CertChain</title>
+    <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="dashboard-body">
+    <nav class="navbar">
+        <div class="nav-logo">
+            <img src="{% static 'certchain/img/logo.png' %}" alt="CertChain" class="nav-logo-img">
+        </div>
+        <div class="nav-user">
+            <span class="font-mono">{{ user.username }} (Admin)</span>
+            <a href="{% url 'logout' %}" class="btn-nav" style="margin-left:15px; background: #e74c3c;">Logout</a>
+        </div>
+    </nav>
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="nav-logo">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">CertChain</span>
-    </div>
-    <div class="nav-links">
-      <span class="role-badge">Admin</span>
-      <span style="font-size:0.85rem; color:var(--text-secondary);">{{ user.username }}</span>
-      <a href="{% url 'logout' %}" class="btn-nav">Esci</a>
-    </div>
-  </nav>
-
-  <div class="dashboard-layout">
-
-    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <nav class="sidebar-nav">
-        <a href="#sezione-rete" class="sidebar-link active">
-          <span class="sidebar-icon">⬡</span>
-          Rete Bayesiana
-        </a>
-        <a href="#sezione-utenti" class="sidebar-link">
-          <span class="sidebar-icon">◎</span>
-          Gestione Utenti
-        </a>
-        <a href="#sezione-stato" class="sidebar-link">
-          <span class="sidebar-icon">◉</span>
-          Stato Sistema
-        </a>
-      </nav>
+        <a href="#" class="active">Configurazione Rete</a>
+        <a href="#">Gestione Utenti</a>
+        <a href="#">Log di Sistema</a>
     </aside>
 
-    <!-- CONTENUTO PRINCIPALE -->
-    <main class="dashboard-main">
-
-      <!-- SEZIONE RETE BAYESIANA -->
-      <section id="sezione-rete" class="dash-section">
-        <div class="section-label">Inizializzazione</div>
-        <h2 class="dash-title">Rete Bayesiana</h2>
-        <p class="dash-subtitle">
-          Definisci le probabilità a priori e le tabelle CPT per le 4 evidenze.
-          I valori devono essere compresi tra 0 e 1.
-        </p>
-
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-        {% endif %}
-
-        <form method="post" action="{% url 'init_bn' %}" class="cpt-form">
-          {% csrf_token %}
-
-          <!-- PROBABILITÀ A PRIORI -->
-          <div class="form-card">
-            <div class="form-card-header">
-              <span class="form-card-icon">◈</span>
-              <div>
-                <h3>Probabilità a Priori</h3>
-                <p>Probabilità iniziale che uno studente abbia le conoscenze richieste</p>
-              </div>
-            </div>
-            <div class="form-grid-2">
-              <div class="field">
-                <label>P(Basi di Programmazione = T)</label>
-                <div class="input-with-hint">
-                  <input type="number" name="basi_prog" min="0" max="1" step="0.001"
-                         placeholder="es. 0.300" required/>
-                  <span class="input-hint">0 – 1</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>P(Programmazione Python = T)</label>
-                <div class="input-with-hint">
-                  <input type="number" name="prog_py" min="0" max="1" step="0.001"
-                         placeholder="es. 0.250" required/>
-                  <span class="input-hint">0 – 1</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- CPT IDCERT CODING -->
-          <div class="form-card">
-            <div class="form-card-header">
-              <span class="form-card-icon">①</span>
-              <div>
-                <h3>CPT — IDCERT Coding</h3>
-                <p>P(IDCERT = T | Basi di Programmazione, Programmazione Python)</p>
-              </div>
-            </div>
-            <div class="form-grid-4">
-              <div class="field">
-                <label class="cpt-label ff">BasiProg=F, ProgPy=F</label>
-                <input type="number" name="idcert_ff" min="0" max="1" step="0.001"
-                       placeholder="0.050" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label ft">BasiProg=F, ProgPy=T</label>
-                <input type="number" name="idcert_ft" min="0" max="1" step="0.001"
-                       placeholder="0.200" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tf">BasiProg=T, ProgPy=F</label>
-                <input type="number" name="idcert_tf" min="0" max="1" step="0.001"
-                       placeholder="0.700" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tt">BasiProg=T, ProgPy=T</label>
-                <input type="number" name="idcert_tt" min="0" max="1" step="0.001"
-                       placeholder="0.950" required/>
-              </div>
-            </div>
-          </div>
-
-          <!-- CPT CORSO PYTHON MUSA -->
-          <div class="form-card">
-            <div class="form-card-header">
-              <span class="form-card-icon">②</span>
-              <div>
-                <h3>CPT — Corso Python Musa</h3>
-                <p>P(Corso Python Musa = T | Basi di Programmazione, Programmazione Python)</p>
-              </div>
-            </div>
-            <div class="form-grid-4">
-              <div class="field">
-                <label class="cpt-label ff">BasiProg=F, ProgPy=F</label>
-                <input type="number" name="corsopy_ff" min="0" max="1" step="0.001"
-                       placeholder="0.050" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label ft">BasiProg=F, ProgPy=T</label>
-                <input type="number" name="corsopy_ft" min="0" max="1" step="0.001"
-                       placeholder="0.300" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tf">BasiProg=T, ProgPy=F</label>
-                <input type="number" name="corsopy_tf" min="0" max="1" step="0.001"
-                       placeholder="0.400" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tt">BasiProg=T, ProgPy=T</label>
-                <input type="number" name="corsopy_tt" min="0" max="1" step="0.001"
-                       placeholder="0.900" required/>
-              </div>
-            </div>
-          </div>
-
-          <!-- CPT FONDAMENTI DI INFO -->
-          <div class="form-card">
-            <div class="form-card-header">
-              <span class="form-card-icon">③</span>
-              <div>
-                <h3>CPT — Fondamenti di Info</h3>
-                <p>P(Fondamenti di Info = T | Basi di Programmazione, Programmazione Python)</p>
-              </div>
-            </div>
-            <div class="form-grid-4">
-              <div class="field">
-                <label class="cpt-label ff">BasiProg=F, ProgPy=F</label>
-                <input type="number" name="fondinfo_ff" min="0" max="1" step="0.001"
-                       placeholder="0.100" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label ft">BasiProg=F, ProgPy=T</label>
-                <input type="number" name="fondinfo_ft" min="0" max="1" step="0.001"
-                       placeholder="0.250" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tf">BasiProg=T, ProgPy=F</label>
-                <input type="number" name="fondinfo_tf" min="0" max="1" step="0.001"
-                       placeholder="0.650" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tt">BasiProg=T, ProgPy=T</label>
-                <input type="number" name="fondinfo_tt" min="0" max="1" step="0.001"
-                       placeholder="0.850" required/>
-              </div>
-            </div>
-          </div>
-
-          <!-- CPT INGEGNERIA DEL SOFTWARE -->
-          <div class="form-card">
-            <div class="form-card-header">
-              <span class="form-card-icon">④</span>
-              <div>
-                <h3>CPT — Ingegneria del Software</h3>
-                <p>P(Ingegneria del Soft = T | Basi di Programmazione, Programmazione Python)</p>
-              </div>
-            </div>
-            <div class="form-grid-4">
-              <div class="field">
-                <label class="cpt-label ff">BasiProg=F, ProgPy=F</label>
-                <input type="number" name="ingsoft_ff" min="0" max="1" step="0.001"
-                       placeholder="0.050" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label ft">BasiProg=F, ProgPy=T</label>
-                <input type="number" name="ingsoft_ft" min="0" max="1" step="0.001"
-                       placeholder="0.150" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tf">BasiProg=T, ProgPy=F</label>
-                <input type="number" name="ingsoft_tf" min="0" max="1" step="0.001"
-                       placeholder="0.600" required/>
-              </div>
-              <div class="field">
-                <label class="cpt-label tt">BasiProg=T, ProgPy=T</label>
-                <input type="number" name="ingsoft_tt" min="0" max="1" step="0.001"
-                       placeholder="0.800" required/>
-              </div>
-            </div>
-          </div>
-
-          <!-- SUBMIT -->
-          <div class="form-actions">
-            <button type="submit" class="btn-primary btn-large">
-              Inizializza Rete Bayesiana
-            </button>
-            <p class="form-note">
-              I valori verranno salvati in <code>data/json/cpt.json</code>
-              e inviati al contratto on-chain.
-            </p>
-          </div>
-
-        </form>
-      </section>
-
-      <!-- SEZIONE GESTIONE UTENTI -->
-      <section id="sezione-utenti" class="dash-section">
-        <div class="section-label">Gestione</div>
-        <h2 class="dash-title">Utenti del Sistema</h2>
-        <p class="dash-subtitle">Crea nuovi utenti e assegna i ruoli.</p>
-
-        <div class="form-card">
-          <div class="form-card-header">
-            <span class="form-card-icon">◎</span>
-            <div>
-              <h3>Nuovo Utente</h3>
-              <p>Il ruolo viene assegnato alla creazione e non può essere modificato</p>
-            </div>
-          </div>
-          <form method="post" action="{% url 'create_user' %}" class="cpt-form">
-            {% csrf_token %}
-            <div class="form-grid-2">
-              <div class="field">
-                <label>Username</label>
-                <input type="text" name="username" placeholder="es. mario_rossi" required/>
-              </div>
-              <div class="field">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="es. mario@example.com" required/>
-              </div>
-              <div class="field">
-                <label>Password</label>
-                <input type="password" name="password" placeholder="••••••••" required/>
-              </div>
-              <div class="field">
-                <label>Ruolo</label>
-                <select name="role">
-                  <option value="STUDENT">Studente</option>
-                  <option value="CERTIFYING_AUTHORITY">Ente Certificatore</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">Crea Utente</button>
-            </div>
-          </form>
+    <main class="main-content">
+        <section class="section">
+            <div class="section-label">Setup Bayesiano</div>
+            <h2 class="section-title">Inizializza Rete Bayesiana</h2>
+            
+            <form method="post" action="{% url 'init_bn' %}" class="card">
+    {% csrf_token %}
+    <h3>Probabilità a Priori</h3>
+    <div class="admin-grid">
+        <div class="field">
+            <label>P(BasiProg)</label>
+            <input type="number" step="0.01" name="basi_prog" required placeholder="0.85">
         </div>
-      </section>
-
-      <!-- SEZIONE STATO SISTEMA -->
-      <section id="sezione-stato" class="dash-section">
-        <div class="section-label">Monitoraggio</div>
-        <h2 class="dash-title">Stato Sistema</h2>
-        <div class="status-grid">
-          <div class="status-card">
-            <div class="status-label">Rete Bayesiana</div>
-            <div class="status-value" id="bn-status">—</div>
-          </div>
-          <div class="status-card">
-            <div class="status-label">Contratto</div>
-            <div class="status-value" id="contract-status">—</div>
-          </div>
-          <div class="status-card">
-            <div class="status-label">Nodo Besu</div>
-            <div class="status-value" id="besu-status">—</div>
-          </div>
+        <div class="field">
+            <label>P(ProgPy)</label>
+            <input type="number" step="0.01" name="prog_py" required placeholder="0.65">
         </div>
-      </section>
+    </div>
 
+    <h3>CPT IDCERT (FF, FT, TF, TT)</h3>
+    <div class="admin-grid">
+        <input type="number" step="0.01" name="idcert_ff" placeholder="FF" required>
+        <input type="number" step="0.01" name="idcert_ft" placeholder="FT" required>
+        <input type="number" step="0.01" name="idcert_tf" placeholder="TF" required>
+        <input type="number" step="0.01" name="idcert_tt" placeholder="TT" required>
+    </div>
+    <button type="submit" class="btn-primary">Inizializza Rete e Salva JSON</button>
+</form>
+
+<hr>
+
+<form method="post" action="{% url 'create_user' %}" class="card">
+    {% csrf_token %}
+    <h3>Nuovo Utente</h3>
+    <input type="text" name="username" placeholder="Username" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <select name="role">
+        <option value="STUDENT">Studente</option>
+        <option value="CERTIFYING_AUTHORITY">Ente</option>
+        <option value="ADMIN">Admin</option>
+    </select>
+    <button type="submit" class="btn-primary">Crea Utente</button>
+</form>
+        </section>
+
+        <section class="section">
+            <div class="section-label">Infrastruttura</div>
+            <div class="admin-grid">
+                <div class="card status-card">● Rete Bayesiana: <span class="text-teal">Attiva</span></div>
+                <div class="card status-card">● Contratto Besu: <span class="text-teal">0x71C...</span></div>
+                <div class="card status-card">● Nodo Besu: <span class="text-teal">Sincronizzato</span></div>
+            </div>
+        </section>
     </main>
-  </div>
-
 </body>
 </html>
