@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
+//Usare la directory: C:\Users\nome_user\...\...\SS-B.group2\blockchain>
 //0) brownie compile -all
 
 
@@ -99,7 +99,7 @@ contract Contract_bn {
     function set_apriorProb(uint16 _BasiProg, uint16 _ProgPy,IDCERTProb calldata _IDCERTprob,
         CorsoPyProb calldata _CorsoPyprob,
         FondInfoProb calldata _FondInfoprob,
-        IngSoftProb calldata _IngSoftprob) external{ //_verify(data,signature,account){
+        IngSoftProb calldata _IngSoftprob) external { //_verify(data,signature,account){
 
 
         //prob.prob_facts = FactsProb(_BasiProg, _ProgPy);
@@ -121,12 +121,14 @@ contract Contract_bn {
         if (_fact_ID == 2) return prob.prob_facts.ProgPy;
 
 
-        revert("ID Fatto non valido: usa 1 o 2");
+        return 0;
  
     }
 
     function set_Evidence(uint[4] calldata _Evidence) external {
         Evidence = _Evidence;
+        //Le imposta l'ente certificatore in base a ciò che osserva off-chain, quindi in questo caso se lo studente ha ottenuto o meno i 4 certificati (IDCERT, CorsoPy, FondInfo, IngSoft)
+        //Le imposta lo studente
     }
 
     function calculate_apostProb() public view returns (uint16,uint16) {
@@ -150,7 +152,7 @@ contract Contract_bn {
 
     // Calcolo denominatore
     uint256 denominatore = Prob_FF + Prob_FT + Prob_TF + Prob_TT;
-    require(denominatore>0,"Denominatore non valido");
+    require(denominatore > 0,"Denominatore non valido");
 
     // Calcolo numeratori
     uint256 numeratore_BasiProgT = Prob_TF + Prob_TT;
@@ -206,6 +208,6 @@ function get_apostInfoFacts(uint8 _Fact_ID) external view returns (uint16) {
         if (_Fact_ID == 1) return apost_BasiProg;
         if (_Fact_ID == 2) return apost_ProgPy;
 
-        revert("ID Fatto non valido: usa 1 o 2"); 
+        return 0;
     }
 }
