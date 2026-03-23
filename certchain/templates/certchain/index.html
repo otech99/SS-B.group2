@@ -14,34 +14,61 @@
   <!-- NAVBAR -->
   <nav class="navbar">
     <div class="nav-logo">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">CertChain</span>
+      <img src="{% static 'certchain/img/logo.png' %}" alt="CertChain" class="nav-logo-img"/>
     </div>
     <div class="nav-links">
       <a href="#come-funziona">Come funziona</a>
-      <a href="#accesso" class="btn-nav">Accedi</a>
+
+      <!-- MENU ACCEDI -->
+      <div class="dropdown">
+        <button class="btn-nav dropdown-toggle">Accedi ▾</button>
+        <div class="dropdown-menu">
+          <a href="{% url 'login' %}" class="dropdown-item">
+            <div>
+              <div class="dropdown-label">Studente</div>
+              <div class="dropdown-desc">Dichiara le tue evidenze</div>
+            </div>
+          </a>
+          <a href="{% url 'login' %}" class="dropdown-item">
+            <div>
+              <div class="dropdown-label">Ente Certificatore</div>
+              <div class="dropdown-desc">Verifica e certifica</div>
+            </div>
+          </a>
+          <a href="{% url 'login' %}" class="dropdown-item">
+            <div>
+              <div class="dropdown-label">Amministratore</div>
+              <div class="dropdown-desc">Gestisci il sistema</div>
+            </div>
+          </a>
+          <a href="{% url 'login' %}" class="dropdown-item">
+            <div>
+              <div class="dropdown-label">Azienda</div>
+              <div class="dropdown-desc">Visualizza i dati </div>
+            </div>
+          </a>
+          
+        </div>
+      </div>
+
     </div>
   </nav>
 
-  <!-- HERO -->
   <section class="hero">
-    <h1 class="hero-title">
-      CertChain<br>
-    </h1>
-    <p class="hero-sub">
-      Certificazione delle competenze Studentesche
-    </p>
-    <div class="hero-actions">
-      <a href="#accesso" class="btn-primary">Inizia ora</a>
-      <a href="#come-funziona" class="btn-ghost">Scopri di più →</a>
+    <div class="hero-cover">
+      <img src="{% static 'certchain/img/logo.png' %}" alt="CertChain Logo" class="hero-cover-img"/>
     </div>
-
-    <!-- Chip tecnici -->
-    
+    <div class="hero-text-content">
+      <p class="hero-sub">
+        Sistema ibrido di certificazione delle competenze studentesche
+        basato su rete bayesiana e blockchain Hyperledger Besu.
+      </p>
+    </div>
   </section>
 
   <!-- SEPARATORE -->
   <div class="divider"></div>
+
 
   <!-- COME FUNZIONA -->
   <section class="section" id="come-funziona">
@@ -53,10 +80,11 @@
       <div class="step">
         <div class="step-number">01</div>
         <div class="step-content">
-          <h3>Inserisci le evidenze</h3>
+          <h3>Dichiara le evidenze</h3>
           <p>
-            Carica le tue certificazioni, esami universitari e corsi completati.
-            Il sistema raccoglie le evidenze osservabili della tua competenza.
+            Lo studente dichiara le certificazioni, gli esami universitari
+            e i corsi completati. Il sistema raccoglie le evidenze
+            osservabili della competenza.
           </p>
         </div>
       </div>
@@ -66,11 +94,11 @@
       <div class="step">
         <div class="step-number">02</div>
         <div class="step-content">
-          <h3>Inferenza bayesiana</h3>
+          <h3>Verifica e inferenza</h3>
           <p>
-            La rete bayesiana on-chain calcola la probabilità posteriore
-            che tu abbia acquisito le conoscenze di base, condizionata
-            alle evidenze osservate.
+            L'ente certificatore verifica le evidenze dichiarate.
+            La rete bayesiana on-chain calcola la probabilità che
+            lo studente abbia acquisito le conoscenze richieste.
           </p>
         </div>
       </div>
@@ -92,53 +120,41 @@
     </div>
   </section>
 
-  <!-- SEPARATORE -->
-  <div class="divider"></div>
-
-  <!-- RUOLI / ACCESSO -->
-  <section class="section" id="accesso">
-    <div class="section-label">Accesso al sistema</div>
-    <h2 class="section-title">Scegli il tuo ruolo</h2>
-
-    <div class="roles">
-
-      <div class="role-card">
-        <div class="role-icon">◎</div>
-        <h3>Studente</h3>
-        <p>Visualizza la tua probabilità di competenza, inserisci le evidenze e consulta le certificazioni ottenute.</p>
-        <a href="{% url 'login' %}" class="btn-card">Accedi come Studente</a>
-      </div>
-
-      <div class="role-card">
-        <div class="role-icon">◉</div>
-        <h3>Ente Certificatore</h3>
-        <p>Emetti e gestisci le certificazioni. Sottometti le evidenze verificate allo smart contract.</p>
-        <a href="{% url 'login' %}" class="btn-card">Accedi come Ente</a>
-      </div>
-
-      <div class="role-card role-card--admin">
-        <div class="role-icon">⬡</div>
-        <h3>Amministratore</h3>
-        <p>Inizializza la rete bayesiana, gestisci le probabilità a priori e monitora il sistema.</p>
-        <a href="{% url 'login' %}" class="btn-card">Accedi come Admin</a>
-      </div>
-
-    </div>
-  </section>
-
   <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-left">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">CertChain</span>
-    </div>
-    <div class="footer-center">
-      Progetto di Software Security and Blockchain · UNIVPM · 2025–2026
-    </div>
-    <div class="footer-right">
-      <span class="chip chip--small">Hyperledger Besu</span>
+  <footer class="footer footer--full">
+    <div class="footer-content">
+      <div class="footer-desc">
+        <p>
+          CertChain è un oracolo bayesiano ibrido per la certificazione
+          delle competenze studentesche. Le evidenze dichiarate dagli studenti
+          vengono verificate da enti certificatori e registrate in modo
+          immutabile sulla blockchain privata Hyperledger Besu,
+          garantendo autenticità, trasparenza e verificabilità.
+        </p>
+        <p class="footer-meta">
+          Progetto di Software Security and Blockchain &mdash;
+          Università Politecnica delle Marche &mdash; A.A. 2025–2026
+        </p>
+      </div>
     </div>
   </footer>
+
+  <!-- JS dropdown -->
+  <script>
+    const toggle = document.querySelector('.dropdown-toggle');
+    const menu   = document.querySelector('.dropdown-menu');
+
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+      toggle.classList.toggle('active');
+    });
+
+    document.addEventListener('click', () => {
+      menu.classList.remove('open');
+      toggle.classList.remove('active');
+    });
+  </script>
 
 </body>
 </html>

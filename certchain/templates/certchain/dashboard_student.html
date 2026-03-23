@@ -2,33 +2,51 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard — CertChain</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+    <meta charset="UTF-8">
+    <title>Dashboard Studente — CertChain</title>
+    <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
 </head>
-<body>
+<body class="dashboard-body">
+    <nav class="navbar">
+        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
+        <div class="nav-user">
+            <span>{{ user.username }}</span>
+            <a href="{% url 'logout' %}" class="btn-nav">Logout</a>
+        </div>
+    </nav>
 
-  <nav class="navbar">
-    <div class="nav-logo">
-      <span class="logo-mark">◈</span>
-      <span class="logo-text">CertChain</span>
-    </div>
-    <div class="nav-links">
-      <span style="font-size:0.85rem; color:var(--text-secondary);">{{ user.username }}</span>
-      <a href="{% url 'logout' %}" class="btn-nav">Esci</a>
-    </div>
-  </nav>
+    <aside class="sidebar">
+        <a href="#" class="active">Le mie Evidenze</a>
+        <a href="#">Certificazioni</a>
+    </aside>
 
-  <section class="section">
-    <div class="section-label">Dashboard</div>
-    <h1 class="hero-title" style="font-size:2rem;">Benvenuto, {{ user.username }}</h1>
-    <p style="color:var(--text-secondary); margin-top:1rem;">
-      Questa è la tua dashboard. I contenuti verranno aggiunti nelle prossime sessioni.
-    </p>
-  </section>
+    <main class="main-content">
+        <div class="card">
+            <h2 class="section-title" style="text-align:left;">Dichiara le tue Evidenze</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="evidence-list">
+                    <label class="toggle-container"><input type="checkbox" name="idcert"> IDCERT Coding</label>
+                    <label class="toggle-container"><input type="checkbox" name="musa"> Corso Python Musa</label>
+                    <label class="toggle-container"><input type="checkbox" name="fondamenti"> Fondamenti di Informatica</label>
+                    <label class="toggle-container"><input type="checkbox" name="ingsw"> Ingegneria del Software</label>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top:20px;">Invia per Verifica</button>
+            </form>
+        </div>
 
+        <div class="card" style="margin-top:30px;">
+            <h3>Risultati Inferenza Bayesiana (On-Chain)</h3>
+            <div class="prob-row">
+                <label>Basi di Programmazione: <strong>{{ prob_basi }}%</strong></label>
+                <div class="progress-bar"><div class="progress-fill" style="width: {{ prob_basi }}%"></div></div>
+            </div>
+            <div class="prob-row">
+                <label>Programmazione Python: <strong>{{ prob_py }}%</strong></label>
+                <div class="progress-bar"><div class="progress-fill" style="width: {{ prob_py }}%"></div></div>
+            </div>
+            <div class="status-badge verified">Stato: Verificato</div>
+        </div>
+    </main>
 </body>
 </html>
