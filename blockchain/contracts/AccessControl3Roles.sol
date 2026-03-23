@@ -1,6 +1,8 @@
+
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-
+import "./Contract_bn.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract AccessControlTwoRoles is Contract_bn, AccessControl {
@@ -23,8 +25,34 @@ contract AccessControlTwoRoles is Contract_bn, AccessControl {
         _grantRole(Admin, admin); 
     }
 
+
+
+    function Access_set_apriorProb(
+    address _contractbnAddress, 
+    uint16 _BasiProg, 
+    uint16 _ProgPy,
+    Contract_bn.IDCERTProb calldata _IDCERTprob, 
+    Contract_bn.CorsoPyProb calldata _CorsoPyprob,
+    Contract_bn.FondInfoProb calldata _FondInfoprob,
+    Contract_bn.IngSoftProb calldata _IngSoftprob
+) public {
+    // Inizializzi il contratto usando l'indirizzo
+    Contract_bn contract_bn = Contract_bn(_contractbnAddress);
+    
+    contract_bn.set_apriorProb(
+        _BasiProg, 
+        _ProgPy, 
+        _IDCERTprob, 
+        _CorsoPyprob, 
+        _FondInfoprob, 
+        _IngSoftprob
+    );
+}
+
+/*
+
     // Funzione riservata agli EnteCert
-    function (address to, uint16 ...) public {
+    function permissions_EnteCert(address to, uint16 ...) public {
         if (!hasRole(EnteCert, msg.sender)) {
             revert CallerNotEnteCert(msg.sender);
         }
@@ -33,20 +61,28 @@ contract AccessControlTwoRoles is Contract_bn, AccessControl {
 
     }
 
-    
+*/
+
+
+/*
 
     // Funzione riservata agli EnteCert
-    function (address to, uint16 ...) public {
+    function permissions_Studente(address to, uint16 ...) public {
         if (!hasRole(Studente, msg.sender)) {
             revert CallerNotStudente(msg.sender);
         }
 
-        //Logica per lo studente
+         
         
     }
 
+*/
+
+
+/*
+
     // Funzione riservata agli EnteCert
-    function (address to, uint16 ...) public {
+    function permissions_Azienda(address to, uint16 ...) public {
         if (!hasRole(Azienda, msg.sender)) {
             revert CallerNotAzienda(msg.sender);
         }
@@ -55,14 +91,29 @@ contract AccessControlTwoRoles is Contract_bn, AccessControl {
 
     }
 
-    // Funzione riservata agli Studenti
-    function (address to, uint16 ...) public {
+*/
+    // Funzione riservata agli Admin
+    function permissions_Admin(address _contractbnAddress, // Indirizzo del contratto BN
+            uint16 _BasiProg, 
+            uint16 _ProgPy,
+            Contract_bn.IDCERTProb calldata _IDCERTprob, 
+            Contract_bn.CorsoPyProb calldata _CorsoPyprob,
+            Contract_bn.FondInfoProb calldata _FondInfoprob,
+            Contract_bn.IngSoftProb calldata _IngSoftprob) public {
         if (!hasRole(Admin, msg.sender)) {
             revert CallerNotAdmin(msg.sender);
         }
-
-        //Logica per l'admin
+    
+        Access_set_apriorProb(
+        _contractbnAddress,
+        _BasiProg,
+        _ProgPy,
+        _IDCERTprob,
+        _CorsoPyprob,
+        _FondInfoprob,
+        _IngSoftprob);
         
+ 
     }
 }
 
