@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 import "./Contract_bn.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract AccessControlTwoRoles is Contract_bn, AccessControl {
+contract AccessControl3Roles is Contract_bn, AccessControl {
     // Definizione dei due ruoli
     bytes32 public constant Studente = keccak256("Studente");
     bytes32 public constant EnteCert = keccak256("EnteCert");
