@@ -389,35 +389,7 @@ body {
   color: var(--primary-blue);
   letter-spacing: -0.5px;
 }
-.dashboard-body {
-    display: block;
-    padding-top: 70px; /* Spazio per navbar fissa */
-}
 
-.sidebar {
-    width: 240px;
-    height: calc(100vh - 70px);
-    position: fixed;
-    left: 0;
-    top: 70px;
-    background: #fff;
-    border-right: 1px solid #e2e8f0;
-    padding: 20px 0;
-}
-
-.sidebar a {
-    display: block;
-    padding: 12px 25px;
-    text-decoration: none;
-    color: var(--text-main);
-    transition: 0.3s;
-}
-
-.sidebar a.active, .sidebar a:hover {
-    background: #f1f5f9;
-    color: var(--accent-teal);
-    border-right: 3px solid var(--accent-teal);
-}
 
 .main-content {
     margin-left: 240px;

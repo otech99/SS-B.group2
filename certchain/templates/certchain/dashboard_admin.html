@@ -1,83 +1,117 @@
 {% load static %}
+
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard — CertChain</title>
+    <title>Admin — CertChain</title>
     <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
 </head>
-<body class="dashboard-body">
-    <nav class="navbar">
-        <div class="nav-logo">
-            <img src="{% static 'certchain/img/logo.png' %}" alt="CertChain" class="nav-logo-img">
-        </div>
-        <div class="nav-user">
-            <span class="font-mono">{{ user.username }} (Admin)</span>
-            <a href="{% url 'logout' %}" class="btn-nav" style="margin-left:15px; background: #e74c3c;">Logout</a>
-        </div>
-    </nav>
 
-    <aside class="sidebar">
-        <a href="#" class="active">Configurazione Rete</a>
-        <a href="#">Gestione Utenti</a>
-        <a href="#">Log di Sistema</a>
-    </aside>
-
-    <main class="main-content">
-        <section class="section">
-            <div class="section-label">Setup Bayesiano</div>
-            <h2 class="section-title">Inizializza Rete Bayesiana</h2>
-            
-            <form method="post" action="{% url 'init_bn' %}" class="card">
-    {% csrf_token %}
-    <h3>Probabilità a Priori</h3>
-    <div class="admin-grid">
-        <div class="field">
-            <label>P(BasiProg)</label>
-            <input type="number" step="0.01" name="basi_prog" required placeholder="0.85">
-        </div>
-        <div class="field">
-            <label>P(ProgPy)</label>
-            <input type="number" step="0.01" name="prog_py" required placeholder="0.65">
-        </div>
+<body class="body">
+    
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-logo">
+        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
     </div>
-
-    <h3>CPT IDCERT (FF, FT, TF, TT)</h3>
-    <div class="admin-grid">
-        <input type="number" step="0.01" name="idcert_ff" placeholder="FF" required>
-        <input type="number" step="0.01" name="idcert_ft" placeholder="FT" required>
-        <input type="number" step="0.01" name="idcert_tf" placeholder="TF" required>
-        <input type="number" step="0.01" name="idcert_tt" placeholder="TT" required>
+    <div class="nav-user">
+        <span class="font-mono">{{ user.username }} (Admin)</span>
+        <a href="{% url 'logout' %}" class="btn-nav danger">Logout</a>
     </div>
-    <button type="submit" class="btn-primary">Inizializza Rete e Salva JSON</button>
-</form>
+</nav>
 
-<hr>
+<!-- MAIN -->
+<main class="main-content single">
 
-<form method="post" action="{% url 'create_user' %}" class="card">
-    {% csrf_token %}
-    <h3>Nuovo Utente</h3>
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="email" name="email" placeholder="Email" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <select name="role">
-        <option value="STUDENT">Studente</option>
-        <option value="CERTIFYING_AUTHORITY">Ente</option>
-        <option value="ADMIN">Admin</option>
-    </select>
-    <button type="submit" class="btn-primary">Crea Utente</button>
-</form>
-        </section>
+    <section class="section">
+        <div class="section-label">Oracle Setup</div>
+        <h2 class="section-title">Configurazione Rete Bayesiana</h2>
 
-        <section class="section">
-            <div class="section-label">Infrastruttura</div>
+        <form method="post" action="{% url 'init_bn' %}" class="card">
+            {% csrf_token %}
+
+            <!-- PRIOR -->
+            <h3>Probabilità a priori</h3>
             <div class="admin-grid">
-                <div class="card status-card">● Rete Bayesiana: <span class="text-teal">Attiva</span></div>
-                <div class="card status-card">● Contratto Besu: <span class="text-teal">0x71C...</span></div>
-                <div class="card status-card">● Nodo Besu: <span class="text-teal">Sincronizzato</span></div>
+                <div class="field">
+                    <label>P(BasiProg)</label>
+                    <input type="number" step="0.01" name="basi_prog" required>
+                </div>
+                <div class="field">
+                    <label>P(ProgPy)</label>
+                    <input type="number" step="0.01" name="prog_py" required>
+                </div>
             </div>
-        </section>
-    </main>
+
+            <!-- IDCERT -->
+            <h3>CPT IDCERT</h3>
+            <div class="admin-grid">
+                <input type="number" step="0.01" name="idcert_ff" placeholder="FF" required>
+                <input type="number" step="0.01" name="idcert_ft" placeholder="FT" required>
+                <input type="number" step="0.01" name="idcert_tf" placeholder="TF" required>
+                <input type="number" step="0.01" name="idcert_tt" placeholder="TT" required>
+            </div>
+
+            <!-- CORSOPY -->
+            <h3>CPT Corso Python</h3>
+            <div class="admin-grid">
+                <input type="number" step="0.01" name="corsopy_ff" required>
+                <input type="number" step="0.01" name="corsopy_ft" required>
+                <input type="number" step="0.01" name="corsopy_tf" required>
+                <input type="number" step="0.01" name="corsopy_tt" required>
+            </div>
+
+            <!-- FONDINFO -->
+            <h3>CPT Fondamenti Info</h3>
+            <div class="admin-grid">
+                <input type="number" step="0.01" name="fondinfo_ff" required>
+                <input type="number" step="0.01" name="fondinfo_ft" required>
+                <input type="number" step="0.01" name="fondinfo_tf" required>
+                <input type="number" step="0.01" name="fondinfo_tt" required>
+            </div>
+
+            <!-- INGSOFT -->
+            <h3>CPT Ingegneria Software</h3>
+            <div class="admin-grid">
+                <input type="number" step="0.01" name="ingsoft_ff" required>
+                <input type="number" step="0.01" name="ingsoft_ft" required>
+                <input type="number" step="0.01" name="ingsoft_tf" required>
+                <input type="number" step="0.01" name="ingsoft_tt" required>
+            </div>
+
+            <button type="submit" class="btn-primary full">
+                Inizializza Oracolo
+            </button>
+        </form>
+    </section>
+
+    <!-- STATUS -->
+    <section class="section">
+        <div class="section-label">Stato Sistema</div>
+
+        <div class="admin-grid">
+            <div class="card status-card">
+                ● Rete Bayesiana:
+                <span class="text-teal">Configurata</span>
+            </div>
+
+            <div class="card status-card">
+                ● Smart Contract:
+                <span class="text-teal">{{ contract_address }}</span>
+            </div>
+
+            <div class="card status-card">
+                ● Stato Nodo:
+                <span class="text-teal">Attivo</span>
+            </div>
+        </div>
+    </section>
+
+</main>
+```
+
 </body>
 </html>
