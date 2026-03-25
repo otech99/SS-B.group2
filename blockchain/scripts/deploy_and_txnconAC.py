@@ -21,8 +21,8 @@ def deploy_and_set_values():
     account = accounts.add(os.environ.get("PRIVATE_KEY")) #IO
     account_EnteCert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
     account_Azienda = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
-    account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
-    #account_Admin = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
+    #account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
+    account_Admin = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
 #-------------------------------------------------------------------------------------
 
 
@@ -36,13 +36,13 @@ def deploy_and_set_values():
     accesscontrol = AccessControl4Roles.deploy(
         account_EnteCert.address,  # entecert 
         account_Azienda.address,  # azienda
-        account_Studente.address,  # studente
+        #account_Studente.address,  # studente
 
         account.address, #IO (in questo caso sto simulando l'Admin, quindi "account.address" va messo alla fine,
         #se avessi simulato tipo EnteCert, avrei messo "account.address" come primo ingresso, commentato
         #l'ingresso "account_EnteCert.address" e decommentato "account_Admin.address"
 
-        #account_Admin.address,  # admin
+        account_Admin.address,  # admin
     {"from": account})
 #--------------------------------------------------------------------------------------
 
@@ -111,7 +111,11 @@ def deploy_and_set_values():
             except ValueError:
                 print("ERRORE: input non numerico")
 
+
+
     contract_bn.set_Evidence(Evidenze, {"from": account})
+
+
 
     print(f"Invio probabilità all'indirizzo: {accesscontrol.address}...")
     tx = accesscontrol.permissions_Admin(
@@ -126,8 +130,13 @@ def deploy_and_set_values():
     )
     tx.wait(1)
 
+
+
+
     print("Eseguo il calcolo Bayesiano on-chain...")
     contract_bn.update_apostProb({"from": account})
+
+
 
 def main():
     deploy_and_set_values()

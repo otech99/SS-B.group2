@@ -11,13 +11,13 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
     bytes32 public constant Azienda = keccak256("Azienda");
     bytes32 public constant Admin = keccak256("Admin");
 
-    error CallerNotEnteCert(address caller);
-    error CallerNotStudente(address caller);
-    error CallerNotAzienda(address caller);
-    error CallerNotAdmin(address caller);
+    //error CallerNotEnteCert(address caller);
+    //error CallerNotStudente(address caller);
+    //error CallerNotAzienda(address caller);
+    //error CallerNotAdmin(address caller);
 
     //-----------------------------------------------------------------------------------------
-    //Qua è dove posso scegliere chi impersonare
+    //QUA è dove posso scegliere chi impersonare
     constructor(address entecert, address azienda, address studente, address admin) {
         // Assegna i ruoli agli indirizzi specificati
 
@@ -25,11 +25,11 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
         //address IOEnteCert = (entecert == address(0)) ? msg.sender : entecert;
         //_grantRole(EnteCert, IOEnteCert); // Assegno il ruolo di entecert a chi distribuisce il contratto
 
-        //address IOstudente = (studente == address(0)) ? msg.sender : studente;
-        //_grantRole(Studente, IOstudente); // Assegno il ruolo di studente a chi distribuisce il contratto
+        address IOstudente = (studente == address(0)) ? msg.sender : studente; //address(0) è un indirizzo speciale che rappresenta l'assenza di un indirizzo, se studente è uguale a address(0), allora viene usato msg.sender, altrimenti viene usato l'indirizzo passato come parametro
+        _grantRole(Studente, IOstudente); // Assegno il ruolo di studente a chi distribuisce il contratto
 
-        address IOAdmin = (admin == address(0)) ? msg.sender : admin;
-        _grantRole(Admin, IOAdmin); // Assegno il ruolo di admin a chi distribuisce il contratto
+        //address IOAdmin = (admin == address(0)) ? msg.sender : admin;
+        //_grantRole(Admin, IOAdmin); // Assegno il ruolo di admin a chi distribuisce il contratto
 
         //address IOazienda = (azienda == address(0)) ? msg.sender : azienda;
         //_grantRole(Azienda, IOazienda); // Assegno il ruolo di azienda a chi distribuisce il contratto
@@ -38,9 +38,9 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
 
         _grantRole(EnteCert, entecert);
 
-        _grantRole(Studente, studente); 
+        //_grantRole(Studente, studente); 
 
-        //_grantRole(Admin, admin);
+        _grantRole(Admin, admin);
 
         _grantRole(Azienda, azienda);
          
@@ -70,6 +70,10 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
     );
 }
 
+
+//MANCA LA LOGICA PER LE FUNZIONI RISERVATE A ENTECERT, STUDENTE E AZIENDA
+//N.B. La transazione relativa alle evidenze deve avere successo solo dopo che EnteCert ha certificato lo studente
+
 /*
 
     // Funzione riservata agli EnteCert
@@ -93,7 +97,7 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
             revert CallerNotStudente(msg.sender);
         }
 
-         
+         Logica per l'EnteCert
         
     }
 
@@ -123,7 +127,8 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
             Contract_bn.IngSoftProb calldata _IngSoftprob) external {
         //msg.sender è l'indirizzo di chi chiama la funzione, se non ha il ruolo di Admin, viene generato un errore
         if (!hasRole(Admin, msg.sender)) {
-            revert CallerNotAdmin(msg.sender);
+            //revert CallerNotAdmin(msg.sender);
+            revert("Caller is not authorized to perform this action");
         }
     
         Access_set_apriorProb(
