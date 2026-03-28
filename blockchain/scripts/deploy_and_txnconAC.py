@@ -1,4 +1,5 @@
 from brownie import accounts, AccessControl4Roles, Contract_bn
+from eth_utils import keccak
 import json
 import os
 
@@ -18,32 +19,27 @@ def deploy_and_set_values():
 #Se vuoi simulare un altro ruolo, ad esempio: EnteCert, basta che commenti la riga "account_EnteCert"
 #perchè l'account per simulare il ruolo è "account" e decommenti la riga "account_Admin"
 
-    account = accounts.add(os.environ.get("PRIVATE_KEY")) #IO
     account_EnteCert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
     account_Azienda = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
-    #account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
+    account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
     account_Admin = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
 #-------------------------------------------------------------------------------------
 
 
-    print(f"Sto eseguendo il deploy con l'account: {account}...")
+    print(f"Sto eseguendo il deploy con l'account: {account_Admin}...")
 
-    contract_bn = Contract_bn.deploy({"from": account})
+    contract_bn = Contract_bn.deploy({"from": account_Admin})
 
 #--------------------------------------------------------------------------------------
     #N.B. qua bisogna rispettare l'ordine degli ingressi del constructor che definisce i ruoli in AccessControl4Roles.sol
     #prima ci va l'account che simula EnteCert, poi Azienda, poi Studente e infine Admin
     accesscontrol = AccessControl4Roles.deploy(
-        account_EnteCert.address,  # entecert 
-        account_Azienda.address,  # azienda
-        #account_Studente.address,  # studente
+        account_EnteCert.address,  
+        account_Azienda.address,  
+        account_Studente.address, 
+        account_Admin.address, 
 
-        account.address, #IO (in questo caso sto simulando l'Admin, quindi "account.address" va messo alla fine,
-        #se avessi simulato tipo EnteCert, avrei messo "account.address" come primo ingresso, commentato
-        #l'ingresso "account_EnteCert.address" e decommentato "account_Admin.address"
-
-        account_Admin.address,  # admin
-    {"from": account})
+    {"from": account_Admin})
 #--------------------------------------------------------------------------------------
 
     Fattore = 1000
@@ -54,6 +50,7 @@ def deploy_and_set_values():
     cpt     = load_json('cpt.json')
     evidenze = load_json('Evidenze.json')
     CV = load_json('cv_inserito.json')['CV']
+    dati_valid_ruolo = load_json('dati_valid_ruolo.json')
 
 
 
@@ -120,13 +117,25 @@ def deploy_and_set_values():
 
     #contract_bn.set_Evidence(evidenze, {"from": account})
 
+    
 
+    ruolo = dati_valid_ruolo["Ente Certificatore"]["Ruolo"] # Simula il ruolo di Admin (decommenta se stai simulando Admin)
 
-    tx1 = accesscontrol.permissions_EnteCert(
-        contract_bn.address,
-            evidenze,
-        {"from": account}
-    )
+    if ruolo == "Studente":
+        account = account_Studente
+    if ruolo == "Ente Certificatore":
+        account = account_EnteCert
+    if ruolo == "Azienda":
+        account = account_Azienda
+    if ruolo == "Admin":
+        account = account_Admin
+
+    #tx1 = accesscontrol.permissions_EnteCert(
+        #contract_bn.address,
+            #evidenze,
+            #ruolo,
+        #{"from": account}
+    #)
 
 
 
@@ -139,14 +148,15 @@ def deploy_and_set_values():
         CorsoPyprob_struct,
         FondInfoprob_struct,
         IngSoftprob_struct,
-        {"from": account}
+        account,
+        {"from": account_Admin}
     )
 
 
 
 
     print("Eseguo il calcolo Bayesiano on-chain...")
-    contract_bn.update_apostProb({"from": account})
+    contract_bn.update_apostProb({"from": account_Admin})
 
 
 
