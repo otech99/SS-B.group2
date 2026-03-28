@@ -71,52 +71,72 @@ contract AccessControl4Roles is Contract_bn, AccessControl {
 }
 
 
+ function Access_set_Evidence(
+    address _contractbnAddress, 
+    uint[4] calldata _Evidence
+) public {
+    Contract_bn contract_bn = Contract_bn(_contractbnAddress);
+    
+    contract_bn.set_Evidence(
+        _Evidence
+    );
+}
+
+function get_Access_apostInfofacts(
+    address _contractbnAddress, 
+    uint8 _fact_ID
+) public {
+    Contract_bn contract_bn = Contract_bn(_contractbnAddress);
+    
+    contract_bn.get_apostInfoFacts(
+        _fact_ID
+    );
+}
+
 //MANCA LA LOGICA PER LE FUNZIONI RISERVATE A ENTECERT, STUDENTE E AZIENDA
 //N.B. La transazione relativa alle evidenze deve avere successo solo dopo che EnteCert ha certificato lo studente
 
-/*
+
 
     // Funzione riservata agli EnteCert
-    function permissions_EnteCert(address to, uint16 ...) public {
+    function permissions_EnteCert(address _contractbnAddress, uint[4] calldata _Evidence) external {
         if (!hasRole(EnteCert, msg.sender)) {
             revert CallerNotEnteCert(msg.sender);
         }
        
-	        //Logica per l'ente certificatore
+       //Dopo che ha certificato lo studente, l'ente certificatore chiama questa funzione per impostare le evidenze
+       //on-chain, che poi lo studente potrà utilizzare per dimostrare le sue competenze alle aziende
+
+       //forse bisogna fa una funzione di lettura anche per EnteCert
+	    Access_set_Evidence(_contractbnAddress, _Evidence);    
 
     }
 
-*/
 
-
-/*
-
-    // Funzione riservata agli EnteCert
-    function permissions_Studente(address to, uint16 ...) public {
+    // Funzione riservata agli Studente
+    function permissions_Studente(address , uint16 ...) public {
         if (!hasRole(Studente, msg.sender)) {
             revert CallerNotStudente(msg.sender);
         }
 
-         Logica per l'EnteCert
+         //Logica per l'Studente
         
     }
 
-*/
 
 
-/*
 
     // Funzione riservata agli EnteCert
-    function permissions_Azienda(address to, uint16 ...) public {
+    function permissions_Azienda(address _contractbnAddress, uint8 _fact_ID) public {
         if (!hasRole(Azienda, msg.sender)) {
             revert CallerNotAzienda(msg.sender);
         }
        
-	        //Logica per l'Azienda
+	    get_Access_apostInfofacts(_contractbnAddress, _fact_ID); //L'azienda chiama questa funzione per ottenere le informazioni a posteriori sullo studente, in modo da valutare se assumerlo o meno
 
     }
 
-*/
+
     // Funzione riservata agli Admin
     function permissions_Admin(address _contractbnAddress, 
             uint16 _BasiProg, 

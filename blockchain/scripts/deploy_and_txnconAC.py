@@ -52,6 +52,11 @@ def deploy_and_set_values():
     cv_inf  = load_json('cv_informatico.json')
     cv_ele  = load_json('cv_elettronico.json')
     cpt     = load_json('cpt.json')
+    evidenze = load_json('Evidenze.json')
+    CV = load_json('cv_inserito.json')['CV']
+
+
+
 
     BasiProg_Inf = int(cv_inf['BasiProg'] * Fattore)
     ProgPy_Inf   = int(cv_inf['ProgPy']   * Fattore)
@@ -80,10 +85,10 @@ def deploy_and_set_values():
     # Scelta CV
     while True:
         try:
-            print("\nScelta del curriculum:")
-            for numero, cv in CV_dict.items():
-                print(f"{numero}) {cv}")
-            CV = int(input("\nScegli un'opzione: "))
+            #print("\nScelta del curriculum:")
+            #for numero, cv in CV_dict.items():
+                #print(f"{numero}) {cv}")
+            #CV = int(input("\nScegli un'opzione: "))
             if CV == 1:
                 BasiProg_scelta = BasiProg_Inf
                 ProgPy_scelta   = ProgPy_Inf
@@ -98,27 +103,35 @@ def deploy_and_set_values():
             print("ERRORE: input non numerico")
 
     # Evidenze
-    Evidenze = []
-    for i in range(len(mapping_evidence)):
-        while True:
-            try:
-                boolevidence = int(input(f"{mapping_evidence[i]} superato? (0=NO, 1=SI): "))
-                if boolevidence in [0, 1]:
-                    Evidenze.append(boolevidence)
-                    break
-                else:
-                    print("ERRORE: inserisci 0 o 1")
-            except ValueError:
-                print("ERRORE: input non numerico")
+    #Evidenze = []
+    #for i in range(len(mapping_evidence)):
+        #while True:
+            #try:
+                #boolevidence = int(input(f"{mapping_evidence[i]} superato? (0=NO, 1=SI): "))
+                #if boolevidence in [0, 1]:
+                    #Evidenze.append(boolevidence)
+                    #break
+                #else:
+                    #print("ERRORE: inserisci 0 o 1")
+            #except ValueError:
+                #print("ERRORE: input non numerico")
 
 
 
-    contract_bn.set_Evidence(Evidenze, {"from": account})
+    #contract_bn.set_Evidence(evidenze, {"from": account})
+
+
+
+    tx1 = accesscontrol.permissions_EnteCert(
+        contract_bn.address,
+            evidenze,
+        {"from": account}
+    )
 
 
 
     print(f"Invio probabilità all'indirizzo: {accesscontrol.address}...")
-    tx = accesscontrol.permissions_Admin(
+    tx2 = accesscontrol.permissions_Admin(
         contract_bn.address,
         BasiProg_scelta,
         ProgPy_scelta,
@@ -128,7 +141,6 @@ def deploy_and_set_values():
         IngSoftprob_struct,
         {"from": account}
     )
-    tx.wait(1)
 
 
 
