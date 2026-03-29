@@ -29,9 +29,9 @@ contract Contract_bn {
 
 
     uint[4] public Evidence; //Vettore di dimensione fissa: [4], per le 4 evidenze
-    uint16 public apost_BasiProg; //variabile contenente il risultato del calcolo bayesiano per Basi di Programmazione = T
+    uint16 internal apost_BasiProg; //variabile contenente il risultato del calcolo bayesiano per Basi di Programmazione = T
     //condizionato all'evidenza osservata
-    uint16 public apost_ProgPy;  //variabile contenente il risultato del calcolo bayesiano per Programmazione Python = T
+    uint16 internal apost_ProgPy;  //variabile contenente il risultato del calcolo bayesiano per Programmazione Python = T
     //condizionato all'evidenza osservata
 
 
@@ -96,10 +96,36 @@ contract Contract_bn {
     //}
 
     //E' la funzione che viene chiamata nel file "deploy_and_txn.py" per eseguire il setup delle probabilità iniziali nell'oracolo on-chain
+    
+    address public authorized_role;
+
+
+
+//Modifiche suggerite da Claude
+//----------------------------------------------------------------------
+    modifier onlyAuthorized() {
+        require(msg.sender == authorized_role, "Non autorizzato");
+        _;
+    }
+
+    function set_AuthorizedCaller(address _new) external onlyAuthorized {
+    require(_new != address(0), "Indirizzo non valido");
+    authorized_role = _new;
+}
+
+constructor(address _authorizedCaller) {
+    require(_authorizedCaller != address(0), "Indirizzo non valido");
+    authorized_role = _authorizedCaller;
+}
+//----------------------------------------------------------------------
+
+
+
+    
     function set_apriorProb(uint16 _BasiProg, uint16 _ProgPy,IDCERTProb calldata _IDCERTprob,
         CorsoPyProb calldata _CorsoPyprob,
         FondInfoProb calldata _FondInfoprob,
-        IngSoftProb calldata _IngSoftprob) external { //_verify(data,signature,account){
+        IngSoftProb calldata _IngSoftprob) external onlyAuthorized{ //_verify(data,signature,account){
 
 
         //prob.prob_facts = FactsProb(_BasiProg, _ProgPy);
@@ -114,7 +140,7 @@ contract Contract_bn {
         prob.prob_IngSoft = _IngSoftprob;
         }
 
-    function get_apriorInfoFacts(uint8 _fact_ID) external view returns (uint16) {
+    function get_apriorInfoFacts(uint8 _fact_ID) external view returns (uint16){
 
 
         if (_fact_ID == 1) return prob.prob_facts.BasiProg;
@@ -125,7 +151,7 @@ contract Contract_bn {
  
     }
 
-    function set_Evidence(uint[4] calldata _Evidence) external {
+    function set_Evidence(uint[4] calldata _Evidence) external onlyAuthorized{
         Evidence = _Evidence;
         //Le imposta l'ente certificatore in base a ciò che osserva off-chain, quindi in questo caso se lo studente ha ottenuto o meno i 4 certificati (IDCERT, CorsoPy, FondInfo, IngSoft)
         //Le imposta lo studente
