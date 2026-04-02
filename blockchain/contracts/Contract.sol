@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+//Ho fuso entrambi i contratti perchè avevo problemi a connettere 2 contratti separati e almeno ne deployamo solo uno
+
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Contract_bn is AccessControl {
@@ -86,7 +88,6 @@ contract Contract_bn is AccessControl {
 
     // -------------------------------------------------------
     // COSTRUTTORE
-    // — assegna DEFAULT_ADMIN_ROLE e i ruoli ai rispettivi indirizzi
     // -------------------------------------------------------
     constructor(
         address _admin,

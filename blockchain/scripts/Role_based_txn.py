@@ -3,7 +3,7 @@ from eth_utils import keccak
 import json
 import os
 
-#questo è lo script per eseguire solo le transazioni sul contratto
+#questo è lo script per eseguire solo le transazioni sul contratto in base al ruolo simulato
 
 #brownie run scripts/Role_based_txn.py --network ganache-gui
 
@@ -123,42 +123,42 @@ def role_management(ruolo_simulato):
     
     if hash_ruolo == hash_ruolo_Admin:
             account = account_Admin
-            print(f"[{ruolo_simulato}] Calling set_apriorProb()...")
+            print(f"[{ruolo_simulato}] chiama set_apriorProb...")
             tx1 = contract_bn.set_apriorProb(
                 BasiProg_scelta, ProgPy_scelta,
                 IDCERTprob_struct, CorsoPyprob_struct,
                 FondInfoprob_struct, IngSoftprob_struct,
                 {"from": account}
             )
-            print(f"✓ set_apriorProb() success: {tx1.txid}\n")
+            print(f"set_apriorProb ok: {tx1.txid}\n")
         
     elif hash_ruolo == hash_ruolo_Studente:
             account = account_Studente
-            print(f"[{ruolo_simulato}] chiama studentDeclaredEvidence()...")
+            print(f"[{ruolo_simulato}] chiama studentDeclaredEvidence...")
             tx2 = contract_bn.studentDeclaredEvidence({"from": account})
             print(f"studentDeclaredEvidence ok: {tx2.txid}\n")
         
     elif hash_ruolo == hash_ruolo_EnteCert:
             account = account_EnteCert
-            print(f"[{ruolo_simulato}] chiama set_Evidence()...")
+            print(f"[{ruolo_simulato}] chiama set_Evidence...")
             tx3 = contract_bn.set_Evidence(evidenze, {"from": account})
             print(f"set_Evidence ok: {tx3.txid}\n")
             
-            print(f"[{ruolo_simulato}] chiama enablePosteriorCalc()...")
+            print(f"[{ruolo_simulato}] chiama enablePosteriorCalc...")
             tx4 = contract_bn.enablePosteriorCalc({"from": account})
             print(f"enablePosteriorCalc ok: {tx4.txid}\n")
             
-            print(f"[{ruolo_simulato}] chiama update_apostProb()...")
+            print(f"[{ruolo_simulato}] chiama update_apostProb...")
             tx5 = contract_bn.update_apostProb({"from": account})
             print(f"update_apostProb ok: {tx5.txid}\n")
         
     elif hash_ruolo == hash_ruolo_Azienda:
             account = account_Azienda
-            print(f"[{ruolo_simulato}] chiama get_priorInfoFacts()...")
+            print(f"[{ruolo_simulato}] chiama get_priorInfoFacts...")
             result_aprior = contract_bn.get_apriorInfoFacts(1, {"from": account})
             print(f"BasiProg a priori ok: {result_aprior / 1000}\n")
             
-            print(f"[{ruolo_simulato}] chiama get_apostInfoFacts()...")
+            print(f"[{ruolo_simulato}] chiama get_apostInfoFacts...")
             result_apost = contract_bn.get_apostInfoFacts(1, {"from": account})
             print(f"BasiProg a posteriori ok: {result_apost / 1000}\n")
     
@@ -166,5 +166,5 @@ def role_management(ruolo_simulato):
 
 
 def main():
-    ruolo_simulato = "Azienda"
+    ruolo_simulato = "Studente"
     role_management(ruolo_simulato)
