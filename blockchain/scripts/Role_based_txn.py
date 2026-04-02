@@ -1,9 +1,11 @@
-from brownie import accounts, AccessControl4Roles, Contract_bn
+from brownie import accounts, Contract_bn
 from eth_utils import keccak
 import json
 import os
 
-#brownie run scripts/deploy_and_txnconAC.py --network ganache-gui
+#questo è lo script per eseguire solo le transazioni sul contratto
+
+#brownie run scripts/Role_based_txn.py --network ganache-gui
 
 
 def load_json(filename):
@@ -11,31 +13,19 @@ def load_json(filename):
     with open(path, 'r') as f:
         return json.load(f)
 
-def deploy_and_set_values():
+
+
+def role_management(ruolo_simulato):
+
+    with open("contract_address.json") as f:
+        addr = json.load(f)["address"]
+        
+    contract_bn = Contract_bn.at(addr)
 
     account_EnteCert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
     account_Azienda = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
     account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
     account_Admin = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
-
-
-
-    print(f"Sto eseguendo il deploy con l'account: {account_Admin}...")
-
-    contract_bn = Contract_bn.deploy(
-    account_Admin.address,   # ← Admin come autorizzato temporaneo
-    {"from": account_Admin})
-
-    #N.B. qua bisogna rispettare l'ordine degli ingressi del constructor che definisce i ruoli in AccessControl4Roles.sol
-    #prima ci va l'account che simula EnteCert, poi Azienda, poi Studente e infine Admin
-    access_control = AccessControl4Roles.deploy(
-        contract_bn.address,
-        account_EnteCert.address,  
-        account_Azienda.address,  
-        account_Studente.address, 
-        account_Admin.address, 
-
-    {"from": account_Admin})
 
 
     Fattore = 1000
@@ -44,9 +34,8 @@ def deploy_and_set_values():
     cv_inf  = load_json('cv_informatico.json')
     cv_ele  = load_json('cv_elettronico.json')
     cpt     = load_json('cpt.json')
-    evidenze = load_json('Evidenze.json')
+    evidenze = load_json('Evidenze.json')['Evidenze']
     CV = load_json('cv_inserito.json')['CV']
-    dati_valid_ruolo = load_json('dati_valid_ruolo.json')
 
 
 
@@ -113,58 +102,69 @@ def deploy_and_set_values():
 
     #contract_bn.set_Evidence(evidenze, {"from": account})
 
-    #Scegliere qui il ruolo che volete simulare:
-    #-----------------------------------------------------------------------------------
-    hash_ruolo = keccak(dati_valid_ruolo["Admin"]["Ruolo"].encode('utf-8'))
-    #-------------------------------------------------------------------------------------
-
-    hash_ruolo_EnteCert = keccak(os.environ.get("HASH_INPUT_EnteCert").encode('utf-8'))
-
-    hash_ruolo_Azienda = keccak(os.environ.get("HASH_INPUT_Azienda").encode('utf-8'))
-
-    hash_ruolo_Studente = keccak(os.environ.get("HASH_INPUT_Studente").encode('utf-8'))
-
-    hash_ruolo_Admin = keccak(os.environ.get("HASH_INPUT_Admin").encode('utf-8'))
-
-    #Assegno address (msg.sender in AccessControl4Roles.sol) in base al ruolo scelto
-    if hash_ruolo == hash_ruolo_Studente:
-        account = account_Studente
-    if hash_ruolo == hash_ruolo_EnteCert:
-        account = account_EnteCert
-    if hash_ruolo == hash_ruolo_Azienda:
-        account = account_Azienda
-    if hash_ruolo == hash_ruolo_Admin:
-        account = account_Admin
-
-    #Transazione per autorizzare il ruolo Admin a chiamare le funzioni protette da onlyAuthorized in Contract_bn.sol
-    tx0 = contract_bn.set_AuthorizedCaller(access_control.address,{"from": account_Admin})
-
-    #Evidenze = evidenze['Evidenze']
-    #tx1 = access_control.permissions_EnteCert(Evidenze,{"from": account}) #Qui ho messo "account" perchè così
-    #l'indirizzo msg.sender on-chain prende come indirizzo quello corrispondente all'utente che supponiamo
-    #abbia effettuato il login
-
-
-
-    #print(f"Invio transazione all'indirizzo: {accesscontrol.address}...")
-    tx2 = access_control.permissions_Admin(
-        BasiProg_scelta,
-        ProgPy_scelta,
-        IDCERTprob_struct,
-        CorsoPyprob_struct,
-        FondInfoprob_struct,
-        IngSoftprob_struct,
-        {"from": account}
-    )
-
     
+    hash_ruolo = keccak(ruolo_simulato.encode('utf-8'))
+   
 
-    print("Eseguo il calcolo Bayesiano on-chain...")
-    contract_bn.update_apostProb({"from": account_Admin})
+    ruolo_EnteCert = "EnteCert"
+    hash_ruolo_EnteCert = keccak(ruolo_EnteCert.encode('utf-8'))
 
-    #tx3 = accesscontrol.permissions_Azienda(contract_bn.address, 1, ruolo, {"from": account_Azienda})
+    ruolo_Azienda ="Azienda"
+    hash_ruolo_Azienda = keccak(ruolo_Azienda.encode('utf-8'))
 
+    ruolo_Studente ="Studente"
+    hash_ruolo_Studente = keccak(ruolo_Studente.encode('utf-8'))
+
+    ruolo_Admin = "Admin"
+    hash_ruolo_Admin = keccak(ruolo_Admin.encode('utf-8'))
+
+    #Assegno address (msg.sender in PROVA_Contratto_unificato.sol) in base al ruolo scelto
+       
+    
+    if hash_ruolo == hash_ruolo_Admin:
+            account = account_Admin
+            print(f"[{ruolo_simulato}] Calling set_apriorProb()...")
+            tx1 = contract_bn.set_apriorProb(
+                BasiProg_scelta, ProgPy_scelta,
+                IDCERTprob_struct, CorsoPyprob_struct,
+                FondInfoprob_struct, IngSoftprob_struct,
+                {"from": account}
+            )
+            print(f"✓ set_apriorProb() success: {tx1.txid}\n")
+        
+    elif hash_ruolo == hash_ruolo_Studente:
+            account = account_Studente
+            print(f"[{ruolo_simulato}] chiama studentDeclaredEvidence()...")
+            tx2 = contract_bn.studentDeclaredEvidence({"from": account})
+            print(f"studentDeclaredEvidence ok: {tx2.txid}\n")
+        
+    elif hash_ruolo == hash_ruolo_EnteCert:
+            account = account_EnteCert
+            print(f"[{ruolo_simulato}] chiama set_Evidence()...")
+            tx3 = contract_bn.set_Evidence(evidenze, {"from": account})
+            print(f"set_Evidence ok: {tx3.txid}\n")
+            
+            print(f"[{ruolo_simulato}] chiama enablePosteriorCalc()...")
+            tx4 = contract_bn.enablePosteriorCalc({"from": account})
+            print(f"enablePosteriorCalc ok: {tx4.txid}\n")
+            
+            print(f"[{ruolo_simulato}] chiama update_apostProb()...")
+            tx5 = contract_bn.update_apostProb({"from": account})
+            print(f"update_apostProb ok: {tx5.txid}\n")
+        
+    elif hash_ruolo == hash_ruolo_Azienda:
+            account = account_Azienda
+            print(f"[{ruolo_simulato}] chiama get_priorInfoFacts()...")
+            result_aprior = contract_bn.get_apriorInfoFacts(1, {"from": account})
+            print(f"BasiProg a priori ok: {result_aprior / 1000}\n")
+            
+            print(f"[{ruolo_simulato}] chiama get_apostInfoFacts()...")
+            result_apost = contract_bn.get_apostInfoFacts(1, {"from": account})
+            print(f"BasiProg a posteriori ok: {result_apost / 1000}\n")
+    
+    
 
 
 def main():
-    deploy_and_set_values()
+    ruolo_simulato = "Azienda"
+    role_management(ruolo_simulato)
