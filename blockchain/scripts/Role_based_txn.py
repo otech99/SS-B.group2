@@ -1,174 +1,144 @@
-from brownie import accounts, Contract_bn
+from brownie import accounts, Contract_bn 
 from eth_utils import keccak
 import json
 import os
 
-#questo è lo script per eseguire solo le transazioni sul contratto in base al ruolo simulato
-
-#brownie run scripts/Role_based_txn.py --network ganache-gui
-
-
 def load_json(filename):
+    # Carica i dati dai file JSON nella cartella data/json
     path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'json', filename)
     with open(path, 'r') as f:
         return json.load(f)
 
-
-
-def role_management(ruolo_simulato):
-
+def role_management(ruolo_simulato, studente_target_id):
+    # Recupero indirizzo contratto dal file generato dal deploy
     with open("contract_address.json") as f:
         addr = json.load(f)["address"]
-        
     contract_bn = Contract_bn.at(addr)
 
+    # Caricamento dei vari Account dal .env tranne quello degli studenti
+    account_Admin    = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
     account_EnteCert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
-    account_Azienda = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
-    account_Studente = accounts.add(os.environ.get("PRIVATE_KEY_Studente")) 
-    account_Admin = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
+    account_Azienda  = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
+    
+    # Lista studenti autorizzati (mettere quelli creati nel .env)
+    studenti = {
+        1: accounts.add(os.environ.get("PRIVATE_KEY_Studente")),
+        2: accounts.add(os.environ.get("PRIVATE_KEY_Studente2")),
+        3: accounts.add(os.environ.get("PRIVATE_KEY_Studente3")),
+        #4: accounts.add(os.environ.get("PRIVATE_KEY_Studente4")),
+        #5: accounts.add(os.environ.get("PRIVATE_KEY_Studente5")),
+        #6: accounts.add(os.environ.get("PRIVATE_KEY_Studente6")),
+        #7: accounts.add(os.environ.get("PRIVATE_KEY_Studente7"))
 
+    }
+    
+    target_student_account = studenti[studente_target_id]
 
+    # Preparazione dati Bayesiani 
     Fattore = 1000
+    #-----------------------------------------------------------------
+    #Controllare se le probabilità inserite non sforano il range [0,1]
+    #-----------------------------------------------------------------
 
-    # ── Carica i valori dai JSON ──────────────────────────────
-    cv_inf  = load_json('cv_informatico.json')
-    cv_ele  = load_json('cv_elettronico.json')
-    cpt     = load_json('cpt.json')
-    evidenze = load_json('Evidenze.json')['Evidenze']
-    CV = load_json('cv_inserito.json')['CV']
+    cv_inf   = load_json('cv_informatico.json')
+    cv_ele = load_json('cv_elettronico.json')
+    cpt      = load_json('cpt.json')
+    evidenze_s1 = load_json('Evidenze_s1.json')['Evidenze']
+    evidenze_s2 = load_json('Evidenze_s2.json')['Evidenze']
+    evidenze_s3 = load_json('Evidenze_s3.json')['Evidenze']
+    cv_s1   = load_json('cv_inserito_s1.json')['CV']
+    cv_s2   = load_json('cv_inserito_s2.json')['CV']
+    cv_s3   = load_json('cv_inserito_s3.json')['CV']
 
 
+    def check_prob(v):
+        if not (0 <= v <= 1000):
+            raise ValueError(f"Valore non valido: {v}")
+        return v
 
+    dati_studenti = {
+        1: {
+            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s1 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
+            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s1 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
+            'evidenze': evidenze_s1,
+        },
+        2: {
+            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s2 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
+            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s2 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
+            'evidenze': evidenze_s2,
+        },
 
-    BasiProg_Inf = int(cv_inf['BasiProg'] * Fattore)
-    ProgPy_Inf   = int(cv_inf['ProgPy']   * Fattore)
-    BasiProg_Ele = int(cv_ele['BasiProg'] * Fattore)
-    ProgPy_Ele   = int(cv_ele['ProgPy']   * Fattore)
-
-    IDCERTprob_struct  = tuple(int(v * Fattore) for v in cpt['IDCERT'].values())
-    CorsoPyprob_struct = tuple(int(v * Fattore) for v in cpt['CorsoPy'].values())
-    FondInfoprob_struct= tuple(int(v * Fattore) for v in cpt['FondInfo'].values())
-    IngSoftprob_struct = tuple(int(v * Fattore) for v in cpt['IngSoft'].values())
-
-    print("Valori caricati dai JSON:")
-    print(f"  CV Informatico: BasiProg={cv_inf['BasiProg']}, ProgPy={cv_inf['ProgPy']}")
-    print(f"  CV Elettronico: BasiProg={cv_ele['BasiProg']}, ProgPy={cv_ele['ProgPy']}")
-    # ─────────────────────────────────────────────────────────
-
-    mapping_evidence = {
-        0: "IDCERT Coding",
-        1: "Corso Python",
-        2: "Fondamenti di Info",
-        3: "Ingegneria del Soft"
+        3: {
+            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s3 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
+            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s3 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
+            'evidenze': evidenze_s3,
+        },
     }
 
-    CV_dict = {1: "Ingegneria Informatica", 2: "Ingegneria Elettronica"}
+    IDCERTprob_struct   = tuple(check_prob(int(v * Fattore)) for v in cpt['IDCERT'].values())
+    CorsoPyprob_struct  = tuple(check_prob(int(v * Fattore)) for v in cpt['CorsoPy'].values())
+    FondInfoprob_struct = tuple(check_prob(int(v * Fattore)) for v in cpt['FondInfo'].values())
+    IngSoftprob_struct  = tuple(check_prob(int(v * Fattore)) for v in cpt['IngSoft'].values())
 
-    # Scelta CV
-    while True:
-        try:
-            #print("\nScelta del curriculum:")
-            #for numero, cv in CV_dict.items():
-                #print(f"{numero}) {cv}")
-            #CV = int(input("\nScegli un'opzione: "))
-            if CV == 1:
-                BasiProg_scelta = BasiProg_Inf
-                ProgPy_scelta   = ProgPy_Inf
-                break
-            elif CV == 2:
-                BasiProg_scelta = BasiProg_Ele
-                ProgPy_scelta   = ProgPy_Ele
-                break
-            else:
-                print(f"ERRORE: Inserisci 1 o 2")
-        except ValueError:
-            print("ERRORE: input non numerico")
-
-    # Evidenze
-    #Evidenze = []
-    #for i in range(len(mapping_evidence)):
-        #while True:
-            #try:
-                #boolevidence = int(input(f"{mapping_evidence[i]} superato? (0=NO, 1=SI): "))
-                #if boolevidence in [0, 1]:
-                    #Evidenze.append(boolevidence)
-                    #break
-                #else:
-                    #print("ERRORE: inserisci 0 o 1")
-            #except ValueError:
-                #print("ERRORE: input non numerico")
-
-
-
-    #contract_bn.set_Evidence(evidenze, {"from": account})
-
-    
+    # Gestione Ruoli tramite Hash 
     hash_ruolo = keccak(ruolo_simulato.encode('utf-8'))
-   
+    STUDENTE_ROLE_HASH = "0xc0cd2e616535ef39d3e47c23fef2910aa6d6610ec0ef24d4c2909f5fc44601fc"
 
-    ruolo_EnteCert = "EnteCert"
-    hash_ruolo_EnteCert = keccak(ruolo_EnteCert.encode('utf-8'))
+    if ruolo_simulato == "Admin":
+        print(f"[Admin] Generazione dell'autorizzazione per gli studenti in corso...")
+        for s_id, s_acc in studenti.items():
+            print(f"Abilitazione accesso per Studente {s_id}: {s_acc.address}")
+            contract_bn.grantRole(STUDENTE_ROLE_HASH, s_acc.address, {"from": account_Admin})
 
-    ruolo_Azienda ="Azienda"
-    hash_ruolo_Azienda = keccak(ruolo_Azienda.encode('utf-8'))
+        # Array paralleli con tutti gli studenti e i loro prior
+        # Costruiti indipendentemente da studente_target_id
+        students_addresses = [studenti[s_id].address for s_id in sorted(studenti)]
+        basi_prog_values   = [dati_studenti[s_id]['BasiProg'] for s_id in sorted(studenti)]
+        prog_py_values     = [dati_studenti[s_id]['ProgPy']   for s_id in sorted(studenti)]
 
-    ruolo_Studente ="Studente"
-    hash_ruolo_Studente = keccak(ruolo_Studente.encode('utf-8'))
+        print(f"[Admin] Inizializzazione CPT e prior per tutti gli studenti...")
+        contract_bn.set_apriorProb(
+            students_addresses,
+            basi_prog_values,
+            prog_py_values,
+            IDCERTprob_struct,
+            CorsoPyprob_struct,
+            FondInfoprob_struct,
+            IngSoftprob_struct,
+            {"from": account_Admin}
+        )
+        print("Configurazione Admin completata con successo.\n")
 
-    ruolo_Admin = "Admin"
-    hash_ruolo_Admin = keccak(ruolo_Admin.encode('utf-8'))
+    elif ruolo_simulato == "Studente":
+        print(f"[Studente {studente_target_id}] ({target_student_account.address}) dichiara la partecipazione.")
+        contract_bn.studentDeclaredEvidence({"from": target_student_account})
+        print(f"Stato aggiornato a EVIDENCE_DECLARED.\n")
 
-    #Assegno address (msg.sender in PROVA_Contratto_unificato.sol) in base al ruolo scelto
-       
-    
-    if hash_ruolo == hash_ruolo_Admin:
-            account = account_Admin
-            print(f"[{ruolo_simulato}] chiama set_apriorProb...")
-            tx1 = contract_bn.set_apriorProb(
-                BasiProg_scelta, ProgPy_scelta,
-                IDCERTprob_struct, CorsoPyprob_struct,
-                FondInfoprob_struct, IngSoftprob_struct,
-                {"from": account}
-            )
-            print(f"set_apriorProb ok: {tx1.txid}\n")
-        
-    elif hash_ruolo == hash_ruolo_Studente:
-            account = account_Studente
-            print(f"[{ruolo_simulato}] chiama studentDeclaredEvidence...")
-            tx2 = contract_bn.studentDeclaredEvidence({"from": account})
-            print(f"studentDeclaredEvidence ok: {tx2.txid}\n")
-        
-    elif hash_ruolo == hash_ruolo_EnteCert:
-            account = account_EnteCert
-            print(f"[{ruolo_simulato}] chiama set_Evidence...")
-            tx3 = contract_bn.set_Evidence(evidenze, {"from": account})
-            print(f"set_Evidence ok: {tx3.txid}\n")
-            
-            print(f"[{ruolo_simulato}] chiama enablePosteriorCalc...")
-            tx4 = contract_bn.enablePosteriorCalc({"from": account})
-            print(f"enablePosteriorCalc ok: {tx4.txid}\n")
-            
-            print(f"[{ruolo_simulato}] chiama update_apostProb...")
-            tx5 = contract_bn.update_apostProb({"from": account})
-            print(f"update_apostProb ok: {tx5.txid}\n")
-        
-    elif hash_ruolo == hash_ruolo_Azienda:
-            account = account_Azienda
-            print(f"[{ruolo_simulato}] chiama get_priorInfoFacts...")
-            result_aprior = contract_bn.get_apriorInfoFacts(1, {"from": account})
-            print(f"BasiProg a priori ok: {result_aprior / 1000}\n")
-            
-            print(f"[{ruolo_simulato}] chiama get_apostInfoFacts...")
-            result_apost = contract_bn.get_apostInfoFacts(1, {"from": account})
-            print(f"BasiProg a posteriori ok: {result_apost / 1000}\n")
-    
-    
+    elif ruolo_simulato == "EnteCert":
+        print(f"[EnteCert] Caricamento dati per Studente {studente_target_id}...")
+        contract_bn.set_Evidence(target_student_account.address, dati_studenti[studente_target_id]['evidenze'], {"from": account_EnteCert})
+        contract_bn.enablePosteriorCalc(target_student_account.address, {"from": account_EnteCert})
+        contract_bn.update_apostProb(target_student_account.address, {"from": account_EnteCert})
+        print(f"Evidenze inserite per lo studente {studente_target_id}.\n")
+
+    elif ruolo_simulato == "Azienda":
+        #print(f"[Azienda] Lettura risultati finali per studente {studente_target_id}:")
+        res_prior = contract_bn.get_apriorInfoFacts(target_student_account.address, 1, {"from": account_Azienda})
+        res_apost = contract_bn.get_apostInfoFacts(target_student_account.address, 1, {"from": account_Azienda})
+        print(f"[Azienda] REPORT FINALE PER STUDENTE {studente_target_id}:\n")
+        print(f"BasiProg (A Priori): {res_prior / Fattore}")
+        print(f"BasiProg (A Posteriori): {res_apost / Fattore}\n")
+
+    else:
+        print("\nIl ruolo inserito non è valido, potrebbe contenere errori grammaticali, di punteggiatura o "
+               "di spazi.\nLa preghiamo di controllare e di riprovare.\n")
 
 
 def main():
-    ruolo_simulato = "Studente"
-    role_management(ruolo_simulato)
+    # Modificare il ruolo e il numero dello studente per testare il funzionamento
 
-
-#Permettere allo studente di modificare il vettore evidenze sia dopo l'inizializzazione che dopo l'ultimo stato
-#Usare solint per analizzare il codice .sol
+    ruolo = "Admin"    # "Admin", "Studente", "EnteCert", "Azienda"
+    studente = 2    # Inserire il numero dello studente di cui vogliamo fare il test
+    
+    
+    role_management(ruolo, studente)
