@@ -168,3 +168,7 @@ def role_management(ruolo_simulato):
 def main():
     ruolo_simulato = "Studente"
     role_management(ruolo_simulato)
+
+
+#Permettere allo studente di modificare il vettore evidenze sia dopo l'inizializzazione che dopo l'ultimo stato
+#Usare solint per analizzare il codice .sol
