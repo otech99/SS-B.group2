@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.24;
+
+/*Errori di Logica e Sicurezza (Priorità Alta)
+Questi avvisi indicano che il codice potrebbe comportarsi in modo inaspettato o che mancano definizioni fondamentali.
+Riga 107:5 (Visibility): Non hai dichiarato se la funzione è public, external o internal. Nelle versioni recenti di Solidity, la visibilità deve essere esplicita.
+Riga 50 (Unused variables): Le variabili _student, required1 e required2 sono dichiarate ma non usate.
+Perché è importante: Indica che forse hai dimenticato di scrivere un pezzo di logica o che stai sprecando memoria (e quindi gas).
+Righe 158 e 174 (Empty blocks): Hai delle funzioni o dei blocchi di codice vuoti. Se sono intenzionali (come un costruttore vuoto), aggiungi un commento all'interno, altrimenti eliminali. */
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -51,7 +58,7 @@ contract Contract_bn is AccessControl {
         require(
         studentState[msg.sender] == State.NOT_INITIALIZED || 
         studentState[msg.sender] == State.VIEW_PROB, 
-        "Lo studente deve essere in stato NOT_INITIALIZED o VIEW_PROB"
+        "Devi essere in stato NOT_INITIALIZED o VIEW_PROB"
         );
 
         _;
@@ -141,7 +148,7 @@ contract Contract_bn is AccessControl {
     prob.prob_IngSoft  = _IngSoftprob;
 
     // Prior per-studente: scritti nel mapping di ciascuno, nessuna sovrascrittura
-    for (uint256 i = 0; i < _students.length; i++) {
+    for (uint256 i = 0; i < _students.length; ++i) {
         student_prior_BasiProg[_students[i]] = _BasiProgValues[i];
         student_prior_ProgPy[_students[i]]   = _ProgPyValues[i];
     }

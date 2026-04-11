@@ -9,7 +9,7 @@ def load_json(filename):
     with open(path, 'r') as f:
         return json.load(f)
 
-def role_management(ruolo_simulato, studente_target_id):
+def role_management(ruolo_simulato, studente_target_id, apriorProb_scelta, apostProb_scelta):
     # Recupero indirizzo contratto dal file generato dal deploy
     with open("contract_address.json") as f:
         addr = json.load(f)["address"]
@@ -123,8 +123,8 @@ def role_management(ruolo_simulato, studente_target_id):
 
     elif ruolo_simulato == "Azienda":
         #print(f"[Azienda] Lettura risultati finali per studente {studente_target_id}:")
-        res_prior = contract_bn.get_apriorInfoFacts(target_student_account.address, 1, {"from": account_Azienda})
-        res_apost = contract_bn.get_apostInfoFacts(target_student_account.address, 1, {"from": account_Azienda})
+        res_prior = contract_bn.get_apriorInfoFacts(target_student_account.address, apriorProb_scelta, {"from": account_Azienda})
+        res_apost = contract_bn.get_apostInfoFacts(target_student_account.address, apostProb_scelta, {"from": account_Azienda})
         print(f"[Azienda] REPORT FINALE PER STUDENTE {studente_target_id}:\n")
         print(f"BasiProg (A Priori): {res_prior / Fattore}")
         print(f"BasiProg (A Posteriori): {res_apost / Fattore}\n")
@@ -139,6 +139,8 @@ def main():
 
     ruolo = "Admin"    # "Admin", "Studente", "EnteCert", "Azienda"
     studente = 2    # Inserire il numero dello studente di cui vogliamo fare il test
+    apriorProb =1;
+    apostProb=2;
     
     
-    role_management(ruolo, studente)
+    role_management(ruolo, studente,apriorProb,apostProb)
