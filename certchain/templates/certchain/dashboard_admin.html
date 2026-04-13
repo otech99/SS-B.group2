@@ -1,7 +1,6 @@
 {% load static %}
 
 <!DOCTYPE html>
-
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -10,15 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
 </head>
 
-<body class="body">
-    
+<body>
+
 <!-- NAVBAR -->
 <nav class="navbar">
     <div class="nav-logo">
         <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
     </div>
     <div class="nav-user">
-        <span class="font-mono">{{ user.username }} (Admin)</span>
+        <span class="font-mono">{{ user.username }} (SISTEMA)</span>
         <a href="{% url 'logout' %}" class="btn-nav danger">Logout</a>
     </div>
 </nav>
@@ -26,89 +25,95 @@
 <!-- MAIN -->
 <main class="main-content single">
 
-    <section class="section">
-        <div class="section-label">Oracle Setup</div>
-        <h2 class="section-title">Configurazione Rete Bayesiana</h2>
+<section class="section">
 
-        <form method="post" action="{% url 'init_bn' %}" class="card">
-            {% csrf_token %}
+    <div class="section-label">Oracle Setup</div>
+    <h2 class="section-title">Configurazione automatica rete bayesiana</h2>
 
-            <!-- PRIOR -->
-            <h3>Probabilità a priori</h3>
-            <div class="admin-grid">
-                <div class="field">
-                    <label>P(BasiProg)</label>
-                    <input type="number" step="0.01" name="basi_prog" required>
-                </div>
-                <div class="field">
-                    <label>P(ProgPy)</label>
-                    <input type="number" step="0.01" name="prog_py" required>
-                </div>
+    <!-- 🔴 STATO SISTEMA -->
+    {% if is_initialized %}
+        <div class="alert-success">
+            Sistema già inizializzato ✔
+        </div>
+    {% else %}
+        <div class="alert-warning">
+            Sistema NON inizializzato
+        </div>
+    {% endif %}
+
+    <!-- 🔴 MESSAGGI -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert-{{ message.tags }}">
+                {{ message }}
             </div>
+        {% endfor %}
+    {% endif %}
 
-            <!-- IDCERT -->
-            <h3>CPT IDCERT</h3>
-            <div class="admin-grid">
-                <input type="number" step="0.01" name="idcert_ff" placeholder="FF" required>
-                <input type="number" step="0.01" name="idcert_ft" placeholder="FT" required>
-                <input type="number" step="0.01" name="idcert_tf" placeholder="TF" required>
-                <input type="number" step="0.01" name="idcert_tt" placeholder="TT" required>
-            </div>
+    <!-- 🔹 PREVIEW DATI -->
+    <div class="card" style="margin-top:20px;">
 
-            <!-- CORSOPY -->
-            <h3>CPT Corso Python</h3>
-            <div class="admin-grid">
-                <input type="number" step="0.01" name="corsopy_ff" required>
-                <input type="number" step="0.01" name="corsopy_ft" required>
-                <input type="number" step="0.01" name="corsopy_tf" required>
-                <input type="number" step="0.01" name="corsopy_tt" required>
-            </div>
+        <h3>Anteprima dati (JSON)</h3>
 
-            <!-- FONDINFO -->
-            <h3>CPT Fondamenti Info</h3>
-            <div class="admin-grid">
-                <input type="number" step="0.01" name="fondinfo_ff" required>
-                <input type="number" step="0.01" name="fondinfo_ft" required>
-                <input type="number" step="0.01" name="fondinfo_tf" required>
-                <input type="number" step="0.01" name="fondinfo_tt" required>
-            </div>
+        <div class="admin-preview">
 
-            <!-- INGSOFT -->
-            <h3>CPT Ingegneria Software</h3>
-            <div class="admin-grid">
-                <input type="number" step="0.01" name="ingsoft_ff" required>
-                <input type="number" step="0.01" name="ingsoft_ft" required>
-                <input type="number" step="0.01" name="ingsoft_tf" required>
-                <input type="number" step="0.01" name="ingsoft_tt" required>
-            </div>
+            <p><strong>CPT IDCERT:</strong>
+                FF={{ cpt.IDCERT.FF }},
+                FT={{ cpt.IDCERT.FT }},
+                TF={{ cpt.IDCERT.TF }},
+                TT={{ cpt.IDCERT.TT }}
+            </p>
 
-            <button type="submit" class="btn-primary full">
-                Inizializza Oracolo
-            </button>
-        </form>
-    </section>
+            <p><strong>CPT Corso Python:</strong>
+                FF={{ cpt.CorsoPy.FF }},
+                FT={{ cpt.CorsoPy.FT }},
+                TF={{ cpt.CorsoPy.TF }},
+                TT={{ cpt.CorsoPy.TT }}
+            </p>
+
+            <p><strong>CPT Fondamenti Info:</strong>
+                FF={{ cpt.FondInfo.FF }},
+                FT={{ cpt.FondInfo.FT }},
+                TF={{ cpt.FondInfo.TF }},
+                TT={{ cpt.FondInfo.TT }}
+            </p>
+
+            <p><strong>CPT Ingegneria Software:</strong>
+                FF={{ cpt.IngSoft.FF }},
+                FT={{ cpt.IngSoft.FT }},
+                TF={{ cpt.IngSoft.TF }},
+                TT={{ cpt.IngSoft.TT }}
+            </p>
+
+        </div>
+    </div>
+
+    <!-- 🔹 AZIONE -->
+    <form method="post" action="{% url 'init_bn' %}" style="margin-top:30px;">
+        {% csrf_token %}
+
+        <button type="submit"
+                class="btn-primary btn-full"
+                {% if is_initialized %}disabled{% endif %}>
+            Carica configurazione da JSON
+        </button>
+    </form>
+
+</section>
 
 </main>
-```
 
-  <!-- FOOTER -->
-  <footer class="footer footer--full">
+<!-- FOOTER -->
+<footer class="footer footer--full">
     <div class="footer-content">
-      <div class="footer-desc">
-        <p>
-          CertChain è un oracolo bayesiano ibrido per la certificazione
-          delle competenze studentesche. Le evidenze dichiarate dagli studenti
-          vengono verificate da enti certificatori e registrate in modo
-          immutabile sulla blockchain privata Hyperledger Besu,
-          garantendo autenticità, trasparenza e verificabilità.
-        </p>
-        <p class="footer-meta">
-          Progetto di Software Security and Blockchain &mdash;
-          Università Politecnica delle Marche &mdash; A.A. 2025–2026
-        </p>
-      </div>
+        <div class="footer-desc">
+            <p>
+                CertChain è un oracolo bayesiano ibrido per la certificazione
+                delle competenze studentesche.
+            </p>
+        </div>
     </div>
-  </footer>
+</footer>
 
 </body>
 </html>
