@@ -1,170 +1,202 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin — CertChain</title>
-    <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — CertChain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'certchain/css/dashboard.css' %}">
 </head>
-
 <body>
 
-<!-- NAVBAR -->
-<nav class="navbar">
+  <!-- NAVBAR -->
+  <nav class="navbar">
     <div class="nav-logo">
-        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
+      <img src="{% static 'certchain/img/logo.png' %}" alt="CertChain" class="nav-logo-img"/>
     </div>
-    <div class="nav-user">
-        <span class="font-mono">{{ user.username }} (SISTEMA)</span>
-        <a href="{% url 'logout' %}" class="btn-nav danger">Logout</a>
+    <div class="nav-links">
+      <span class="role-badge">Admin</span>
+      <span style="font-size:0.85rem; color:var(--text-secondary);">{{ user.username }}</span>
+      <a href="{% url 'logout' %}" class="btn-nav">Esci</a>
     </div>
-</nav>
+  </nav>
 
-<!-- MAIN -->
-<main class="main-content single">
+  <div class="dashboard-layout">
+    <!-- CONTENUTO PRINCIPALE -->
+    <main class="dashboard-main">
 
-<section class="section">
-
-    <div class="section-label">Oracle Setup</div>
-    <h2 class="section-title">Configurazione automatica rete bayesiana</h2>
-
-    <!-- 🔴 STATO SISTEMA -->
-    {% if is_initialized %}
-        <div class="alert-success">
-            Sistema già inizializzato ✔
-        </div>
-    {% else %}
-        <div class="alert-warning">
-            Sistema NON inizializzato
-        </div>
-    {% endif %}
-
-    <!-- 🔴 MESSAGGI -->
-    {% if messages %}
+      <!-- MESSAGGI -->
+      {% if messages %}
         {% for message in messages %}
-            <div class="alert-{{ message.tags }}">
-                {{ message }}
-            </div>
+          <div class="alert-{{ message.tags }}">{{ message }}</div>
         {% endfor %}
-    {% endif %}
+      {% endif %}
 
-    <!-- 🔹 PREVIEW DATI -->
-    <div class="card" style="margin-top:20px;">
+      <!-- ── SEZIONE 1: DEPLOY ── -->
+    <section class="section" style="padding: 40px 0;">
+         <div class="section-label">Deploy Contratto</div>
 
-        <h3>Anteprima dati (JSON)</h3>
+        {% if contract_address %}
+            <div class="alert-success">
+            Contratto deployato ✔ —
+            <code style="font-family:var(--font-mono); font-size:0.8rem;">
+                {{ contract_address }}
+            </code>
+            </div>
+        {% else %}
+            <div class="alert-warning">Contratto non ancora deployato</div>
+        {% endif %}
 
-        <div class="admin-preview">
-
-            <p><strong>CPT IDCERT:</strong>
-                FF={{ cpt.IDCERT.FF }},
-                FT={{ cpt.IDCERT.FT }},
-                TF={{ cpt.IDCERT.TF }},
-                TT={{ cpt.IDCERT.TT }}
-            </p>
-
-            <p><strong>CPT Corso Python:</strong>
-                FF={{ cpt.CorsoPy.FF }},
-                FT={{ cpt.CorsoPy.FT }},
-                TF={{ cpt.CorsoPy.TF }},
-                TT={{ cpt.CorsoPy.TT }}
-            </p>
-
-            <p><strong>CPT Fondamenti Info:</strong>
-                FF={{ cpt.FondInfo.FF }},
-                FT={{ cpt.FondInfo.FT }},
-                TF={{ cpt.FondInfo.TF }},
-                TT={{ cpt.FondInfo.TT }}
-            </p>
-
-            <p><strong>CPT Ingegneria Software:</strong>
-                FF={{ cpt.IngSoft.FF }},
-                FT={{ cpt.IngSoft.FT }},
-                TF={{ cpt.IngSoft.TF }},
-                TT={{ cpt.IngSoft.TT }}
-            </p>
-
-        </div>
-    </div>
-
-    <!-- 🔹 AZIONE -->
-    <form method="post" action="{% url 'init_bn' %}" style="margin-top:30px;">
-        {% csrf_token %}
-
-        <button type="submit"
-                class="btn-primary btn-full"
-                {% if is_initialized %}disabled{% endif %}>
-            Carica configurazione da JSON
-        </button>
-    </form>
-
-</section>
-<section class="section" style="margin-top: 50px;">
-    <div class="section-label">User Management</div>
-    <h2 class="section-title">Registrazione nuovi attori</h2>
-
-    <div class="card">
-        <form method="post" action="{% url 'create_user' %}">
+        <form method="post" action="{% url 'deploy_contract' %}">
             {% csrf_token %}
-            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <input type="text" name="username" placeholder="Username" class="input-field" required>
-                <input type="email" name="email" placeholder="Email" class="input-field" required>
-                <input type="password" name="password" placeholder="Password" class="input-field" required>
-                <select name="role" class="input-field" required>
-                    <option value="STUDENT">Studente</option>
-                    <option value="CERTIFYING_AUTHORITY">Ente Certificatore (Authority)</option>
-                    <option value="COMPANY">Azienda</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-primary" style="margin-top: 15px;">Crea Utente</button>
+            <button type="submit" class="btn-primary"
+                    {% if contract_address %}disabled{% endif %}>
+            Deploya Contratto
+            </button>
         </form>
-    </div>
+
+        {% if contract_address %}
+            <p class="form-note">Il contratto è già stato deployato.</p>
+        {% endif %}
     </section>
-<section class="section" style="margin-top: 50px;">
-    <h3 style="margin-top: 30px;">Utenti Registrati</h3>
-<table class="admin-table">
-    <thead>
-        <tr>
-            <th>Username</th>
-            <th>Ruolo</th>
-            <th>Data</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for u in users_list %}
-        <tr>
-            <td>{{ u.username }}</td>
-            <td><span class="badge">{{ u.role }}</span></td>
-            <td>{{ u.date_joined|date:"d/m/Y" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</section>
 
-<section class="section" style="margin-top: 50px;">
-    <div class="section-label">Network Status</div>
-    <h2 class="section-title">Dettagli Smart Contract</h2>
-    <div class="card font-mono" style="font-size: 0.9em; background: #f9f9f9;">
-        <p><strong>Contract Address:</strong> {{ contract_address|default:"Non ancora distribuito" }}</p>
-        <p><strong>Network:</strong> Hyperledger Besu (Development)</p>
-    </div>
-</section>
+      <!-- ── SEZIONE 2: RETE BAYESIANA ── -->
+      <section class="section" style="padding: 40px 0;">
+        <div class="section-label">Rete Bayesiana</div>
+       
+        <!-- Stato BN -->
+        {% if is_initialized %}
+          <div class="alert-success">Rete Bayesiana inizializzata ✔</div>
+        {% else %}
+          <div class="alert-warning">Rete Bayesiana NON inizializzata</div>
+        {% endif %}
 
-</main>
-
-<!-- FOOTER -->
-<footer class="footer footer--full">
-    <div class="footer-content">
-        <div class="footer-desc">
-            <p>
-                CertChain è un oracolo bayesiano ibrido per la certificazione
-                delle competenze studentesche.
-            </p>
+        <!-- Anteprima CPT -->
+        <div class="form-card">
+          <div class="form-card-header">
+            <span class="form-card-icon">◈</span>
+            <div>
+              <h3>Anteprima dati (da cpt.json)</h3>
+              <p>Valori caricati automaticamente — modificabili nel file JSON</p>
+            </div>
+          </div>
+          <div class="cpt-preview">
+            <div class="cpt-row">
+              <span class="cpt-name">IDCERT Coding</span>
+              <span class="cpt-label ff">FF={{ cpt.IDCERT.FF }}</span>
+              <span class="cpt-label ft">FT={{ cpt.IDCERT.FT }}</span>
+              <span class="cpt-label tf">TF={{ cpt.IDCERT.TF }}</span>
+              <span class="cpt-label tt">TT={{ cpt.IDCERT.TT }}</span>
+            </div>
+            <div class="cpt-row">
+              <span class="cpt-name">Corso Python Musa</span>
+              <span class="cpt-label ff">FF={{ cpt.CorsoPy.FF }}</span>
+              <span class="cpt-label ft">FT={{ cpt.CorsoPy.FT }}</span>
+              <span class="cpt-label tf">TF={{ cpt.CorsoPy.TF }}</span>
+              <span class="cpt-label tt">TT={{ cpt.CorsoPy.TT }}</span>
+            </div>
+            <div class="cpt-row">
+              <span class="cpt-name">Fondamenti di Info</span>
+              <span class="cpt-label ff">FF={{ cpt.FondInfo.FF }}</span>
+              <span class="cpt-label ft">FT={{ cpt.FondInfo.FT }}</span>
+              <span class="cpt-label tf">TF={{ cpt.FondInfo.TF }}</span>
+              <span class="cpt-label tt">TT={{ cpt.FondInfo.TT }}</span>
+            </div>
+            <div class="cpt-row">
+              <span class="cpt-name">Ingegneria del Soft</span>
+              <span class="cpt-label ff">FF={{ cpt.IngSoft.FF }}</span>
+              <span class="cpt-label ft">FT={{ cpt.IngSoft.FT }}</span>
+              <span class="cpt-label tf">TF={{ cpt.IngSoft.TF }}</span>
+              <span class="cpt-label tt">TT={{ cpt.IngSoft.TT }}</span>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:1.5rem;">
+            <form method="post" action="{% url 'init_bn' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn-primary"
+                      {% if is_initialized %}disabled{% endif %}>
+                Inizializza Rete Bayesiana
+              </button>
+            </form>
+            {% if is_initialized %}
+              <p class="form-note">La rete è già stata inizializzata.</p>
+            {% endif %}
+          </div>
         </div>
-    </div>
-</footer>
+      </section>
 
+      <!-- ── SEZIONE 3: GESTIONE STUDENTI ── -->
+      <section class="section" style="padding: 40px 0;">
+        <div class="section-label">Gestione Studenti</div>
+        
+       
+        <!-- Lista studenti -->
+        <h3 style="font-size:1rem; font-weight:500; margin-bottom:1rem;">
+    Utenti Registrati
+</h3>
+
+<div class="table-container">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>CV</th>
+                <th>Index</th>
+                <th>Ruolo</th>
+                <th>Data Registrazione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users_list %}
+            <tr>
+                <td style="font-weight: 600;">{{ u.username }}</td>
+                <td>
+                    {% if u.student_index %}
+                        <span class="cv-text">{{ u.cv_display }}</span>
+                    {% else %}
+                        <span class="empty-state">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.student_index %}
+                        <span class="index-chip">s{{ u.student_index }}</span>
+                    {% else %}
+                        <span class="empty-state">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="role-badge role-{{ u.role|lower }}">
+                        {{ u.role }}
+                    </span>
+                </td>
+                <td style="color: #64748b;">{{ u.date_joined|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center; padding:3rem; color:#94a3b8;">
+                    Nessun utente nel sistema.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer footer--full">
+    <div class="footer-content">
+      <div class="footer-desc">
+        <p>CertChain — Progetto di Software Security and Blockchain · UNIVPM · 2025–2026</p>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

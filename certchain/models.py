@@ -29,22 +29,27 @@ class CustomUserManager(BaseUserManager):
             **extra_fields
         )
 
-
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    """Utente con ruolo fisso — non modificabile dopo la creazione."""
+    """Utente con ruolo fisso e indice per file JSON."""
 
     class Role(models.TextChoices):
         ADMIN                = 'ADMIN',                'Amministratore'
         CERTIFYING_AUTHORITY = 'CERTIFYING_AUTHORITY', 'Ente Certificatore'
         STUDENT              = 'STUDENT',              'Studente'
+        COMPANY              = 'COMPANY',              'Azienda' # <--- Aggiunta Azienda
 
     username   = models.CharField(max_length=150, unique=True)
     email      = models.EmailField(unique=True)
     role       = models.CharField(
         max_length=30,
         choices=Role.choices,
-        editable=False,   # non modificabile dopo la creazione
+        editable=False,
     )
+    
+    # 🔹 NUOVO CAMPO: Serve per mappare student1 -> s1, student2 -> s2, ecc.
+    # Sarà null per Admin, Azienda e Authority.
+    student_index = models.PositiveIntegerField(null=True, blank=True, help_text="Indice per i file JSON (es. 1 per s1)")
+
     is_active  = models.BooleanField(default=True)
     is_staff   = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -54,6 +59,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
+    # Metodi di controllo
     def is_admin(self):
         return self.role == self.Role.ADMIN
 
@@ -62,11 +68,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def is_student(self):
         return self.role == self.Role.STUDENT
+    
+    def is_company(self): # <--- Aggiunto metodo per Azienda
+        return self.role == self.Role.COMPANY
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
-
-
+        
 class OTPToken(models.Model):
     """Token OTP per la verifica in due passaggi."""
 

@@ -114,10 +114,8 @@ def dashboard(request):
 @login_required
 def dashboard_admin(request):
     """
-    Dashboard principale per l'Admin: gestisce l'anteprima CPT, 
-    lo stato della blockchain e la lista degli utenti di sistema.
+    Dashboard principale per l'Admin con caricamento dinamico dei CV dai file JSON.
     """
-    # Sicurezza: solo l'admin può accedere
     if not request.user.is_admin():
         return redirect('home')
 
@@ -131,35 +129,52 @@ def dashboard_admin(request):
         except Exception as e:
             print(f"Errore lettura cpt.json: {e}")
 
-    # 2. Controllo Stato Blockchain e Indirizzo Contratto
+    # 2. Controllo Stato Blockchain
     addr_path = os.path.join(settings.BASE_DIR, 'blockchain', 'contract_address.json')
     contract_address = "Non ancora distribuito"
     is_initialized = False
-
     if os.path.exists(addr_path):
         try:
             with open(addr_path, 'r') as f:
                 data = json.load(f)
-                # Recuperiamo l'indirizzo salvato dal deploy di Brownie
                 contract_address = data.get('address', 'Indirizzo non trovato')
                 is_initialized = True 
         except Exception as e:
             print(f"Errore lettura contract_address.json: {e}")
 
-    # 3. Recupero lista utenti per la sezione User Management
-    # Escludiamo magari lo stesso admin loggato per chiarezza
+    # 3. Recupero lista utenti e ARRICCHIMENTO con dati JSON
     all_users = CustomUser.objects.all().order_by('-date_joined')
+    
+    for u in all_users:
+        u.cv_display = "—" # Valore di default
+        if u.role == 'STUDENT' and u.student_index:
+            # Costruiamo il percorso: data/json/cv_inserito_s1.json, ecc.
+            cv_file_path = os.path.join(settings.BASE_DIR, 'data', 'json', f'cv_inserito_s{u.student_index}.json')
+            
+            if os.path.exists(cv_file_path):
+                try:
+                    with open(cv_file_path, 'r') as f:
+                        cv_json = json.load(f)
+                        valore_cv = cv_json.get('CV')
+                        # Mappatura basata sui tuoi file
+                        if valore_cv == 1:
+                            u.cv_display = "Ingegneria Informatica"
+                        elif valore_cv == 2:
+                            u.cv_display = "Ingegneria Elettronica"
+                        else:
+                            u.cv_display = f"CV ID: {valore_cv}"
+                except Exception as e:
+                    print(f"Errore lettura JSON per {u.username}: {e}")
 
-    # 4. Rendering della dashboard con il contesto completo
+    # 4. Rendering
     return render(request, 'certchain/dashboard_admin.html', {
         'user': request.user,
         'token': request.session.get('access_token', ''),
-        'cpt': cpt_data,                 # Dati per l'anteprima tabelle
-        'is_initialized': is_initialized, # Booleano per il tasto carica
-        'contract_address': contract_address, # Indirizzo reale da mostrare nel box
-        'users_list': all_users,         # Lista per visualizzare chi è già registrato
+        'cpt': cpt_data,
+        'is_initialized': is_initialized,
+        'contract_address': contract_address,
+        'users_list': all_users, # Ora gli oggetti u hanno l'attributo u.cv_display
     })
-
 @login_required
 def init_bn(request):
     """
@@ -203,14 +218,47 @@ def dashboard_authority(request):
         'user': request.user,
     })
 
+
 @login_required
 def dashboard_student(request):
-    if not request.user.role == 'STUDENT':
+    # Sicurezza: solo gli studenti possono accedere
+    if not request.user.is_student():
         return redirect('home')
+
+    # Recuperiamo l'indice dello studente (1, 2 o 3)
+    idx = request.user.student_index
+    
+    if idx is None:
+        # Gestione errore se l'indice non è settato
+        return render(request, 'certchain/error.html', {'message': "Indice studente non configurato."})
+
+    # Percorsi dei file basati sull'indice
+    evidenze_path = os.path.join(settings.BASE_DIR, 'data', 'json', f'Evidenze_s{idx}.json')
+    scelta_path = os.path.join(settings.BASE_DIR, 'data', 'json', f'cv_inserito_s{idx}.json')
+
+    evidenze_data = {}
+    scelta_cv = "N/D"
+
+    # Lettura file Evidenze
+    if os.path.exists(evidenze_path):
+        with open(evidenze_path, 'r') as f:
+            data = json.load(f)
+            # Mappiamo i valori [1, 0...] in nomi leggibili
+            nomi_esami = ["IDCERT", "Corso Python", "Fondamenti Informatica", "Ingegneria Software"]
+            evidenze_data = zip(nomi_esami, data.get("Evidenze", []))
+
+    # Lettura Scelta CV
+    if os.path.exists(scelta_path):
+        with open(scelta_path, 'r') as f:
+            scelta = json.load(f).get("CV")
+            scelta_cv = "Informatico" if scelta == 1 else "Elettronico"
+
     return render(request, 'certchain/dashboard_student.html', {
         'user': request.user,
+        'evidenze': evidenze_data,
+        'cv_scelto': scelta_cv,
+        'student_id': idx
     })
-
 @login_required
 def dashboard_company(request):
     # Controlla se l'utente ha il ruolo corretto (adattalo al tuo modello CustomUser)
@@ -235,4 +283,19 @@ def create_user(request):
         else:
             CustomUser.objects.create_user(username=username, email=email, password=password, role=role)
             messages.success(request, f'Utente "{username}" creato con ruolo {role}.')
+    return redirect('dashboard_admin')
+
+@login_required
+def deploy_contract(request):
+    """
+    Gestisce il deploy del contratto. 
+    Per ora facciamo solo un redirect, aggiungeremo la logica Brownie in seguito.
+    """
+    if not request.user.is_admin():
+        return redirect('home')
+
+    if request.method == 'POST':
+        # Qui andrà la chiamata a subprocess.run(['brownie', 'run', ...])
+        messages.info(request, "Funzionalità di deploy in fase di configurazione.")
+        
     return redirect('dashboard_admin')

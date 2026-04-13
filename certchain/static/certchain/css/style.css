@@ -431,3 +431,76 @@ body {
     font-family: 'DM Sans', sans-serif;
     width: 100%;
 }
+/* RESET E CENTRATURA LAYOUT */
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra le sezioni orizzontalmente */
+    padding: 20px;
+    background-color: #f4f7fa; /* Sfondo pagina leggermente grigio */
+}
+
+.section {
+    width: 100%;
+    max-width: 1100px; /* Larghezza massima delle sezioni */
+    margin: 0 auto;
+}
+
+/* CONTAINER TABELLA BIANCO */
+.table-container {
+    background: #ffffff !important; /* Forza sfondo bianco */
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    margin: 20px 0;
+    width: 100%;
+    overflow: hidden; /* Taglia i bordi della tabella per seguire il border-radius */
+}
+
+/* TABELLA ADMIN */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    background: white;
+}
+
+.admin-table thead {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #edf2f7;
+}
+
+.admin-table th {
+    padding: 18px 20px;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.admin-table td {
+    padding: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.admin-table tr:hover {
+    background-color: #fdfdfd;
+}
+
+/* CHIP E BADGE */
+.index-chip {
+    font-family: 'DM Mono', monospace;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+}
+
+.cv-text {
+    font-weight: 500;
+    color: #0f172a;
+}
