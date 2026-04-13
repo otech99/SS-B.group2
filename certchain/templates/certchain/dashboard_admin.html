@@ -100,6 +100,57 @@
     </form>
 
 </section>
+<section class="section" style="margin-top: 50px;">
+    <div class="section-label">User Management</div>
+    <h2 class="section-title">Registrazione nuovi attori</h2>
+
+    <div class="card">
+        <form method="post" action="{% url 'create_user' %}">
+            {% csrf_token %}
+            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <input type="text" name="username" placeholder="Username" class="input-field" required>
+                <input type="email" name="email" placeholder="Email" class="input-field" required>
+                <input type="password" name="password" placeholder="Password" class="input-field" required>
+                <select name="role" class="input-field" required>
+                    <option value="STUDENT">Studente</option>
+                    <option value="CERTIFYING_AUTHORITY">Ente Certificatore (Authority)</option>
+                    <option value="COMPANY">Azienda</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 15px;">Crea Utente</button>
+        </form>
+    </div>
+    </section>
+<section class="section" style="margin-top: 50px;">
+    <h3 style="margin-top: 30px;">Utenti Registrati</h3>
+<table class="admin-table">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Ruolo</th>
+            <th>Data</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users_list %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td><span class="badge">{{ u.role }}</span></td>
+            <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</section>
+
+<section class="section" style="margin-top: 50px;">
+    <div class="section-label">Network Status</div>
+    <h2 class="section-title">Dettagli Smart Contract</h2>
+    <div class="card font-mono" style="font-size: 0.9em; background: #f9f9f9;">
+        <p><strong>Contract Address:</strong> {{ contract_address|default:"Non ancora distribuito" }}</p>
+        <p><strong>Network:</strong> Hyperledger Besu (Development)</p>
+    </div>
+</section>
 
 </main>
 

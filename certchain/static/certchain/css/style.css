@@ -415,3 +415,19 @@ body {
 
 .font-mono { font-family: 'DM Mono', monospace; }
 .text-teal { color: var(--accent-teal); }
+
+
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Due colonne */
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    width: 100%;
+}

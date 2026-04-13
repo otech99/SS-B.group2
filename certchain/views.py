@@ -1,12 +1,14 @@
+import os
+import json
+import subprocess  # Fondamentale per l'integrazione blockchain senza crash
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required # Questo risolve il NameError
+from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import CustomUser
+from .models import CustomUser, OTPToken
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import OTPToken
-
 
 # ── Helper ────────────────────────────────────────────────────
 
@@ -15,6 +17,8 @@ def _get_user_role(user):
         return 'Admin'
     elif user.role == 'CERTIFYING_AUTHORITY':
         return 'CertifyingAuthority'
+    elif user.role == 'COMPANY': # <--- AGGIUNGI QUESTO
+        return 'Company'
     else:
         return 'Student'
 
@@ -24,17 +28,18 @@ def _redirect_by_role(user):
         return redirect('dashboard_admin')
     elif role == 'CertifyingAuthority':
         return redirect('dashboard_authority')
+    elif role == 'Company':
+        return redirect('dashboard_company')
     else:
         return redirect('dashboard_student')
+
 # ── Views ─────────────────────────────────────────────────────
 
 def home(request):
     """Pagina iniziale pubblica."""
     return render(request, 'certchain/index.html')
 
-
 def login_view(request):
-    """Step 1 — verifica username e password, invia OTP via email."""
     if request.user.is_authenticated:
         return _redirect_by_role(request.user)
 
@@ -45,14 +50,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            # Genera OTP
             token_value = OTPToken.generate_token()
             OTPToken.objects.create(user=user, token=token_value)
-
-            # Salva username in sessione per lo step 2
             request.session['otp_user_id'] = user.id
 
-            # Invia email con OTP
             send_mail(
                 subject='CertChain — Codice di accesso',
                 message=f'Il tuo codice di accesso è: {token_value}\n\nScade tra 5 minuti.',
@@ -60,16 +61,13 @@ def login_view(request):
                 recipient_list=[user.email],
                 fail_silently=False,
             )
-
             return redirect('verify_otp')
         else:
             error = 'Credenziali non valide. Riprova.'
 
     return render(request, 'certchain/login.html', {'error': error})
 
-
 def verify_otp(request):
-    """Step 2 — verifica il codice OTP ricevuto via email."""
     user_id = request.session.get('otp_user_id')
     if not user_id:
         return redirect('login')
@@ -77,7 +75,6 @@ def verify_otp(request):
     error = None
     if request.method == 'POST':
         token_input = request.POST.get('otp', '').strip()
-
         try:
             user = CustomUser.objects.get(id=user_id)
             otp  = OTPToken.objects.filter(
@@ -87,103 +84,148 @@ def verify_otp(request):
             ).latest('created_at')
 
             if otp.is_valid():
-                # Marca il token come usato
                 otp.is_used = True
                 otp.save()
-
-                # Login completo
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
-                # Genera JWT e salva in sessione
                 refresh = RefreshToken.for_user(user)
                 request.session['access_token']  = str(refresh.access_token)
                 request.session['refresh_token'] = str(refresh)
                 request.session['user_role']      = _get_user_role(user)
-
-                # Pulisci otp_user_id dalla sessione
                 del request.session['otp_user_id']
 
                 return _redirect_by_role(user)
             else:
                 error = 'Codice scaduto o già utilizzato.'
-
-        except (User.DoesNotExist, OTPToken.DoesNotExist):
+        except Exception:
             error = 'Codice non valido.'
 
     return render(request, 'certchain/verify_otp.html', {'error': error})
 
-
+@login_required
 def logout_view(request):
-    """Logout — invalida sessione."""
     logout(request)
     request.session.flush()
     return redirect('home')
 
-
 @login_required
 def dashboard(request):
     return _redirect_by_role(request.user)
-
-
 @login_required
 def dashboard_admin(request):
+    """
+    Dashboard principale per l'Admin: gestisce l'anteprima CPT, 
+    lo stato della blockchain e la lista degli utenti di sistema.
+    """
+    # Sicurezza: solo l'admin può accedere
     if not request.user.is_admin():
         return redirect('home')
+
+    # 1. Caricamento dati CPT (Anteprima Oracle)
+    cpt_path = os.path.join(settings.BASE_DIR, 'data', 'json', 'cpt.json')
+    cpt_data = {}
+    if os.path.exists(cpt_path):
+        try:
+            with open(cpt_path, 'r') as f:
+                cpt_data = json.load(f)
+        except Exception as e:
+            print(f"Errore lettura cpt.json: {e}")
+
+    # 2. Controllo Stato Blockchain e Indirizzo Contratto
+    addr_path = os.path.join(settings.BASE_DIR, 'blockchain', 'contract_address.json')
+    contract_address = "Non ancora distribuito"
+    is_initialized = False
+
+    if os.path.exists(addr_path):
+        try:
+            with open(addr_path, 'r') as f:
+                data = json.load(f)
+                # Recuperiamo l'indirizzo salvato dal deploy di Brownie
+                contract_address = data.get('address', 'Indirizzo non trovato')
+                is_initialized = True 
+        except Exception as e:
+            print(f"Errore lettura contract_address.json: {e}")
+
+    # 3. Recupero lista utenti per la sezione User Management
+    # Escludiamo magari lo stesso admin loggato per chiarezza
+    all_users = CustomUser.objects.all().order_by('-date_joined')
+
+    # 4. Rendering della dashboard con il contesto completo
     return render(request, 'certchain/dashboard_admin.html', {
         'user': request.user,
         'token': request.session.get('access_token', ''),
+        'cpt': cpt_data,                 # Dati per l'anteprima tabelle
+        'is_initialized': is_initialized, # Booleano per il tasto carica
+        'contract_address': contract_address, # Indirizzo reale da mostrare nel box
+        'users_list': all_users,         # Lista per visualizzare chi è già registrato
     })
-
-
-@login_required
-def dashboard_authority(request):
-    if not request.user.groups.filter(name='CertifyingAuthority').exists():
-        return redirect('home')
-    return render(request, 'certchain/dashboard_authority.html', {
-        'user': request.user,
-        'token': request.session.get('access_token', ''),
-    })
-
-
-@login_required
-def dashboard_student(request):
-    if not request.user.groups.filter(name='Student').exists():
-        return redirect('home')
-    return render(request, 'certchain/dashboard_student.html', {
-        'user': request.user,
-        'token': request.session.get('access_token', ''),
-    })
-
 
 @login_required
 def init_bn(request):
+    """
+    Lancia lo script Brownie. Non servono più i float() perché i dati sono presi
+    direttamente dai JSON dallo script role_based_txn.py.
+    """
     if not request.user.is_admin():
         return redirect('home')
-    if request.method == 'POST':
-        cpt_data = {
-            "priori": {
-                "BasiProg": float(request.POST.get('basi_prog')),
-                "ProgPy":   float(request.POST.get('prog_py')),
-            },
-            "IDCERT":    {"FF": float(request.POST.get('idcert_ff')),    "FT": float(request.POST.get('idcert_ft')),    "TF": float(request.POST.get('idcert_tf')),    "TT": float(request.POST.get('idcert_tt'))},
-            "CorsoPy":   {"FF": float(request.POST.get('corsopy_ff')),   "FT": float(request.POST.get('corsopy_ft')),   "TF": float(request.POST.get('corsopy_tf')),   "TT": float(request.POST.get('corsopy_tt'))},
-            "FondInfo":  {"FF": float(request.POST.get('fondinfo_ff')),  "FT": float(request.POST.get('fondinfo_ft')),  "TF": float(request.POST.get('fondinfo_tf')),  "TT": float(request.POST.get('fondinfo_tt'))},
-            "IngSoft":   {"FF": float(request.POST.get('ingsoft_ff')),   "FT": float(request.POST.get('ingsoft_ft')),   "TF": float(request.POST.get('ingsoft_tf')),   "TT": float(request.POST.get('ingsoft_tt'))},
-        }
-        json_path = os.path.join(settings.BASE_DIR, 'data', 'json', 'cpt.json')
-        os.makedirs(os.path.dirname(json_path), exist_ok=True)
-        with open(json_path, 'w') as f:
-            json.dump(cpt_data, f, indent=2)
-        messages.success(request, 'Rete Bayesiana inizializzata con successo.')
-    return redirect('dashboard_admin')
 
+    if request.method == 'POST':
+        try:
+            # Percorso dello script Brownie
+            script_path = os.path.join(settings.BASE_DIR, 'blockchain', 'scripts', 'role_based_txn.py')
+            
+            # Eseguiamo il comando esterno. 
+            # NOTA: Assicurati che '--network development' (o besu) sia corretto per il tuo setup
+            result = subprocess.run(
+                ['brownie', 'run', script_path, 'main', '--network', 'development'], 
+                capture_output=True, 
+                text=True,
+                cwd=os.path.join(settings.BASE_DIR, 'blockchain')
+            )
+
+            if result.returncode == 0:
+                messages.success(request, 'Blockchain inizializzata con successo via Brownie!')
+            else:
+                # Se Brownie fallisce, riportiamo l'errore tecnico per il debug
+                messages.error(request, f'Errore Brownie: {result.stderr}')
+                
+        except Exception as e:
+            messages.error(request, f'Errore di sistema: {str(e)}')
+
+    return redirect('dashboard_admin')
+# -------------------------------------
+
+@login_required
+def dashboard_authority(request):
+    if not request.user.role == 'CERTIFYING_AUTHORITY':
+        return redirect('home')
+    return render(request, 'certchain/dashboard_authority.html', {
+        'user': request.user,
+    })
+
+@login_required
+def dashboard_student(request):
+    if not request.user.role == 'STUDENT':
+        return redirect('home')
+    return render(request, 'certchain/dashboard_student.html', {
+        'user': request.user,
+    })
+
+@login_required
+def dashboard_company(request):
+    # Controlla se l'utente ha il ruolo corretto (adattalo al tuo modello CustomUser)
+    if request.user.role != 'COMPANY': 
+        return redirect('home')
+        
+    return render(request, 'certchain/dashboard_company.html', {
+        'user': request.user,
+    })
 
 @login_required
 def create_user(request):
     if not request.user.is_admin():
         return redirect('home')
     if request.method == 'POST':
-        from .models import CustomUser
         username = request.POST.get('username')
         email    = request.POST.get('email')
         password = request.POST.get('password')
