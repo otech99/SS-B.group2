@@ -136,11 +136,30 @@ def role_management(ruolo_simulato, studente_target_id):
                "di spazi.\nLa preghiamo di controllare e di riprovare.\n")
 
 
-def main():
+#def main():
     # Modificare il ruolo e il numero dello studente per testare il funzionamento
 
-    ruolo = "Admin"    # "Admin", "Studente", "EnteCert", "Azienda"
-    studente = 2    # Inserire il numero dello studente di cui vogliamo fare il test
+    #ruolo = "Admin"    # "Admin", "Studente", "EnteCert", "Azienda"
+    #studente = 2    # Inserire il numero dello studente di cui vogliamo fare il test
     
     
+    #role_management(ruolo, studente)
+
+def main(*args):
+    # Valori di default nel caso lo lanci senza parametri dal terminale
+    ruolo = "Admin"
+    studente = 1
+
+    # Se passiamo argomenti (es: brownie run scripts/Role_based_txn.py Studente 2)
+    if args:
+        ruolo = args[0]
+        if len(args) > 1:
+            studente = int(args[1])
+
+    print(f"\n--- [BROWNIE SCRIPT] ---")
+    print(f"Azione: {ruolo}")
+    print(f"Target Studente ID: {studente}")
+    print(f"------------------------\n")
+    
+    # Chiama la tua funzione esistente con i nuovi parametri dinamici
     role_management(ruolo, studente)

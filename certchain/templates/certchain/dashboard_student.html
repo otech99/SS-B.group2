@@ -3,56 +3,83 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Studente — CertChain</title>
     <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono&display=swap" rel="stylesheet">
+    <style>
+        .status-badge.verified { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-badge.pending { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
+        .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-warning { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .declaration-card {
+            margin-top: 40px; 
+            text-align: center; 
+            background: #f8fafc; 
+            padding: 40px; 
+            border-radius: 16px; 
+            border: 2px dashed #e2e8f0;
+        }
+        .btn-disabled { background: #94a3b8 !important; cursor: not-allowed !important; transform: none !important; }
+    </style>
 </head>
 <body>
 
 <nav class="navbar">
     <div class="nav-logo">
-        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
+        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img" alt="Logo">
     </div>
     <div class="nav-user">
         <span class="font-mono">{{ user.username }} (STUDENTE S{{ student_id }})</span>
-        <a href="{% url 'logout' %}" class="btn-nav danger" style="background: #b91c1c; margin-left:15px;">Logout</a>
+        <a href="{% url 'logout' %}" class="btn-nav danger" style="background: #b91c1c; margin-left:15px; text-decoration: none; color: white; padding: 8px 15px; border-radius: 6px;">Logout</a>
     </div>
 </nav>
 
-<main class="main-content single" style="margin-left: 0; max-width: 1000px; margin: 0 auto; padding: 40px 10%;">
+<main class="main-content single" style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
     
-    <section class="section" style="padding: 40px 0;">
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <section class="section">
         <div class="section-label">Profilo Studente</div>
         <h2 class="section-title" style="margin-bottom: 2rem;">I tuoi Progressi Accademici</h2>
 
-        <div class="admin-form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-            <div class="step" style="border-top-color: var(--accent-gold);">
-                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Percorso Formativo</p>
-                <h3 style="margin: 5px 0;">{{ cv_scelto }}</h3>
+        <div class="admin-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+            <div class="step" style="border-top: 4px solid var(--accent-gold); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Percorso Formativo</p>
+                <h3 style="margin: 5px 0; color: var(--text-dark);">{{ cv_scelto }}</h3>
             </div>
-            <div class="step" style="border-top-color: var(--accent-teal);">
-                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">ID Blockchain</p>
-                <h3 class="font-mono" style="margin: 5px 0;">Student_S{{ student_id }}</h3>
+            <div class="step" style="border-top: 4px solid var(--accent-teal); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">ID Blockchain</p>
+                <h3 class="font-mono" style="margin: 5px 0; color: var(--text-dark);">Student_S{{ student_id }}</h3>
             </div>
         </div>
 
-        <div class="step" style="padding: 0; overflow: hidden;">
+        <div class="form-card" style="padding: 0; overflow: hidden; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
             <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead style="background: var(--bg-light);">
+                <thead style="background: #f1f5f9;">
                     <tr>
-                        <th style="padding: 15px; border-bottom: 1px solid #e2e8f0;">Esame / Competenza</th>
-                        <th style="padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">Esito</th>
+                        <th style="padding: 18px; border-bottom: 2px solid #e2e8f0; font-weight: 600;">Esame / Competenza</th>
+                        <th style="padding: 18px; border-bottom: 2px solid #e2e8f0; text-align: center; font-weight: 600;">Esito</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for nome, esito in evidenze %}
                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 15px;">{{ nome }}</td>
-                        <td style="padding: 15px; text-align: center;">
+                        <td style="padding: 18px; font-weight: 500;">{{ nome }}</td>
+                        <td style="padding: 18px; text-align: center;">
                             {% if esito == 1 %}
-                                <span class="status-badge verified">Superato</span>
+                                <span class="status-badge verified" style="padding: 5px 12px; border-radius: 20px; font-size: 0.85rem;">Superato</span>
                             {% else %}
-                                <span class="status-badge" style="background: #fee2e2; color: #991b1b;">Non Superato</span>
+                                <span class="status-badge" style="background: #fee2e2; color: #991b1b; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem;">Non Superato</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -61,20 +88,67 @@
             </table>
         </div>
 
-        <div style="margin-top: 40px; text-align: center;">
-            <p style="margin-bottom: 20px; color: var(--text-muted);">
-                I dati sopra riportati sono estratti dal tuo fascicolo digitale locale. 
-                Puoi dichiararli sulla blockchain per avviare il processo di certificazione.
+        <div class="declaration-card">
+            <h3 style="margin-bottom: 15px; color: var(--text-dark);">Dichiarazione delle Competenze</h3>
+            <p style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.6;">
+                I dati sopra riportati sono estratti dal tuo fascicolo digitale. <br>
+                Per procedere con la validazione on-chain e il calcolo della probabilità di idoneità, 
+                devi confermare la tua partecipazione al processo di certificazione.
             </p>
-            <button class="btn-primary" style="padding: 15px 40px;">Dichiara Evidenze su Blockchain</button>
+
+            <form method="POST" action="{% url 'student_declare' %}">
+    {% csrf_token %}
+    <div class="form-card" style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead style="background: #f1f5f9;">
+                <tr>
+                    <th style="padding: 18px;">Esame / Competenza</th>
+                    <th style="padding: 18px; text-align: center;">Dichiara Possesso</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 18px;">IDCERT Coding</td>
+                    <td style="padding: 18px; text-align: center;">
+                        <input type="checkbox" name="IDCERT" value="1" {% if idcert_val == 1 %}checked{% endif %}>
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 18px;">Corso Python</td>
+                    <td style="padding: 18px; text-align: center;">
+                        <input type="checkbox" name="CorsoPy" value="1" {% if corsopy_val == 1 %}checked{% endif %}>
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 18px;">Fondamenti Info</td>
+                    <td style="padding: 18px; text-align: center;">
+                        <input type="checkbox" name="FondInfo" value="1" {% if fondinfo_val == 1 %}checked{% endif %}>
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 18px;">Ingegneria Soft</td>
+                    <td style="padding: 18px; text-align: center;">
+                        <input type="checkbox" name="IngSoft" value="1" {% if ingsoft_val == 1 %}checked{% endif %}>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="declaration-card">
+        <button type="submit" class="btn-primary">Invia Dichiarazione Aggiornata</button>
+    </div>
+</form>
         </div>
     </section>
 
 </main>
 
-<footer class="footer">
+<footer class="footer" style="margin-top: 60px; padding: 40px 0; border-top: 1px solid #e2e8f0; text-align: center;">
     <div class="footer-content">
-        <p>CertChain — Sistema di Validazione Competenze basato su Rete Bayesiana e Blockchain.</p>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            <strong>CertChain</strong> — Sistema di Validazione Competenze basato su Rete Bayesiana e Blockchain Ethereum.
+        </p>
     </div>
 </footer>
 

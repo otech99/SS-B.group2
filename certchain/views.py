@@ -182,47 +182,52 @@ def dashboard_authority(request):
     return render(request, 'certchain/dashboard_authority.html', {
         'user': request.user,
     })
-
 @login_required
 def dashboard_student(request):
-    # Sicurezza: solo gli studenti possono accedere
     if not request.user.is_student():
         return redirect('home')
 
-    # Recuperiamo l'indice dello studente (1, 2 o 3)
-    idx = request.user.student_index
+    # 1. Recuperiamo l'indice dello studente (es. 1, 2 o 3)
+    student_id = request.user.student_index if request.user.student_index else 1
     
-    if idx is None:
-        # Gestione errore se l'indice non è settato
-        return render(request, 'certchain/error.html', {'message': "Indice studente non configurato."})
+    try:
+        # 2. Percorsi dei file JSON
+        base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
+        cv_path = os.path.join(base_path, f'cv_inserito_s{student_id}.json')
+        evidenze_path = os.path.join(base_path, f'Evidenze_s{student_id}.json')
 
-    # Percorsi dei file basati sull'indice
-    evidenze_path = os.path.join(settings.BASE_DIR, 'data', 'json', f'Evidenze_s{idx}.json')
-    scelta_path = os.path.join(settings.BASE_DIR, 'data', 'json', f'cv_inserito_s{idx}.json')
+        # 3. Lettura del CV scelto (Informatica = 1, Elettronica = 2)
+        with open(cv_path, 'r') as f:
+            cv_data = json.load(f)
+            # Definiamo la variabile che mancava
+            cv_val = cv_data.get('CV', 1) 
+            cv_scelto = "Percorso Informatico" if cv_val == 1 else "Percorso Elettronico"
 
-    evidenze_data = {}
-    scelta_cv = "N/D"
-
-    # Lettura file Evidenze
-    if os.path.exists(evidenze_path):
+        # 4. Lettura delle evidenze (esami)
         with open(evidenze_path, 'r') as f:
-            data = json.load(f)
-            # Mappiamo i valori [1, 0...] in nomi leggibili
-            nomi_esami = ["IDCERT", "Corso Python", "Fondamenti Informatica", "Ingegneria Software"]
-            evidenze_data = zip(nomi_esami, data.get("Evidenze", []))
+            evidenze_data = json.load(f)
+            # Creiamo una lista di tuple (NomeEsame, Esito) per il template
+            nomi_esami = ["IDCERT Coding", "Corso Python", "Fondamenti Info", "Ingegneria Soft"]
+            valori_esiti = evidenze_data.get('Evidenze', [0, 0, 0, 0])
+            evidenze_list = zip(nomi_esami, valori_esiti)
 
-    # Lettura Scelta CV
-    if os.path.exists(scelta_path):
-        with open(scelta_path, 'r') as f:
-            scelta = json.load(f).get("CV")
-            scelta_cv = "Informatico" if scelta == 1 else "Elettronico"
+        # 5. Stato (Per ora lo mettiamo fisso, poi lo leggeremo dalla Blockchain)
+        state = "IDLE" 
 
-    return render(request, 'certchain/dashboard_student.html', {
-        'user': request.user,
-        'evidenze': evidenze_data,
-        'cv_scelto': scelta_cv,
-        'student_id': idx
-    })
+    except Exception as e:
+        print(f"Errore nel caricamento dati studente: {e}")
+        cv_scelto = "Dati non disponibili"
+        evidenze_list = []
+        state = "ERROR"
+
+    context = {
+        'student_id': student_id,
+        'cv_scelto': cv_scelto,      # <-- Ora è definita!
+        'evidenze': evidenze_list,
+        'state': state,
+    }
+    
+    return render(request, 'certchain/dashboard_student.html', context)
 @login_required
 def dashboard_company(request):
     # Controlla se l'utente ha il ruolo corretto (adattalo al tuo modello CustomUser)
@@ -330,3 +335,51 @@ def init_bn(request):
         print("--- DEBUG: Fine procedura ---\n")
 
     return redirect('dashboard_admin')
+
+@login_required
+def student_declare(request):
+    if not request.user.is_student():
+        return redirect('home')
+
+    if request.method == 'POST':
+        stud_id = request.user.student_index if request.user.student_index else 1
+        
+        # 1. Recupera i valori dalle checkbox (1 se selezionato, 0 se no)
+        new_evidences = [
+            1 if request.POST.get('IDCERT') else 0,
+            1 if request.POST.get('CorsoPy') else 0,
+            1 if request.POST.get('FondInfo') else 0,
+            1 if request.POST.get('IngSoft') else 0
+        ]
+
+        try:
+            # 2. AGGIORNA IL FILE JSON LOCALE
+            base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
+            evidenze_path = os.path.join(base_path, f'Evidenze_s{stud_id}.json')
+            
+            with open(evidenze_path, 'w') as f:
+                json.dump({"Evidenze": new_evidences}, f, indent=4)
+            
+            print(f"DEBUG: JSON aggiornato per Studente {stud_id}: {new_evidences}")
+
+            # 3. CHIAMA LA BLOCKCHAIN
+            blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+            script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
+            
+            result = subprocess.run(
+                ["brownie", "run", script_path, "Studente", str(stud_id), "--network", "ganache-local"],
+                cwd=blockchain_path, capture_output=True, text=True, env=os.environ.copy()
+            )
+
+            if "confirmed" in result.stdout:
+                messages.success(request, "Dichiarazione e competenze aggiornate on-chain!")
+            elif "revert" in result.stderr or "revert" in result.stdout:
+                # Gestiamo il caso in cui lo stato è già avanzato
+                messages.warning(request, "Competenze salvate localmente, ma lo stato on-chain non permette una nuova dichiarazione (già inviata).")
+            else:
+                messages.success(request, "Competenze aggiornate correttamente!")
+
+        except Exception as e:
+            messages.error(request, f"Errore: {str(e)}")
+
+    return redirect('dashboard_student')
