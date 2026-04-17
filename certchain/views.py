@@ -176,48 +176,12 @@ def dashboard_admin(request):
         'users_list': all_users, # Ora gli oggetti u hanno l'attributo u.cv_display
     })
 @login_required
-def init_bn(request):
-    """
-    Lancia lo script Brownie. Non servono più i float() perché i dati sono presi
-    direttamente dai JSON dallo script role_based_txn.py.
-    """
-    if not request.user.is_admin():
-        return redirect('home')
-
-    if request.method == 'POST':
-        try:
-            # Percorso dello script Brownie
-            script_path = os.path.join(settings.BASE_DIR, 'blockchain', 'scripts', 'role_based_txn.py')
-            
-            # Eseguiamo il comando esterno. 
-            # NOTA: Assicurati che '--network development' (o besu) sia corretto per il tuo setup
-            result = subprocess.run(
-                ['brownie', 'run', script_path, 'main', '--network', 'development'], 
-                capture_output=True, 
-                text=True,
-                cwd=os.path.join(settings.BASE_DIR, 'blockchain')
-            )
-
-            if result.returncode == 0:
-                messages.success(request, 'Blockchain inizializzata con successo via Brownie!')
-            else:
-                # Se Brownie fallisce, riportiamo l'errore tecnico per il debug
-                messages.error(request, f'Errore Brownie: {result.stderr}')
-                
-        except Exception as e:
-            messages.error(request, f'Errore di sistema: {str(e)}')
-
-    return redirect('dashboard_admin')
-# -------------------------------------
-
-@login_required
 def dashboard_authority(request):
     if not request.user.role == 'CERTIFYING_AUTHORITY':
         return redirect('home')
     return render(request, 'certchain/dashboard_authority.html', {
         'user': request.user,
     })
-
 
 @login_required
 def dashboard_student(request):
@@ -284,18 +248,85 @@ def create_user(request):
             CustomUser.objects.create_user(username=username, email=email, password=password, role=role)
             messages.success(request, f'Utente "{username}" creato con ruolo {role}.')
     return redirect('dashboard_admin')
-
 @login_required
 def deploy_contract(request):
-    """
-    Gestisce il deploy del contratto. 
-    Per ora facciamo solo un redirect, aggiungeremo la logica Brownie in seguito.
-    """
     if not request.user.is_admin():
         return redirect('home')
 
     if request.method == 'POST':
-        # Qui andrà la chiamata a subprocess.run(['brownie', 'run', ...])
-        messages.info(request, "Funzionalità di deploy in fase di configurazione.")
+        try:
+            blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+            # Usiamo l'ambiente corrente per passare le API Key e le Private Key
+            current_env = os.environ.copy()
+
+            # Indentazione corretta: 12 spazi (o 3 tab) dal margine sinistro
+            result = subprocess.run(
+                ["brownie", "run", "scripts/Deploy.py", "--network", "ganache-local"],
+                cwd=blockchain_path,
+                capture_output=True,
+                text=True,
+                env=current_env,
+                timeout=60
+            )
+
+            if result.returncode == 0:
+                messages.success(request, "Smart Contract deployato con successo!")
+            else:
+                messages.error(request, f"Errore Brownie: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            messages.error(request, "Timeout: Ganache non risponde.")
+        except Exception as e:
+            messages.error(request, f"Errore di sistema: {str(e)}")
+
+    return redirect('dashboard_admin')
+@login_required
+def init_bn(request):
+    if not request.user.is_admin():
+        return redirect('home')
+
+    if request.method == 'POST':
+        print("\n--- DEBUG: Inizio procedura Inizializzazione BN ---")
+        try:
+            blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+            current_env = os.environ.copy()
+            
+            print(f"DEBUG: Eseguo Brownie in: {blockchain_path}")
+            
+            # Lanciamo il processo
+            result = subprocess.run(
+                ["brownie", "run", "scripts/Role_based_txn.py", "main", "--network", "ganache-local"],
+                cwd=blockchain_path,
+                capture_output=True,
+                text=True,
+                env=current_env,
+                timeout=180 # Aumentiamo a 3 min perché le TX sono tante
+            )
+
+            # Log dell'output nel terminale Django
+            print("--- STDOUT BROWNIE ---")
+            print(result.stdout)
+            print("--- STDERR BROWNIE ---")
+            print(result.stderr)
+
+            if result.returncode == 0:
+                flag_path = os.path.join(blockchain_path, 'bn_initialized.flag')
+                with open(flag_path, 'w') as f:
+                    f.write('initialized')
+                print("DEBUG: Inizializzazione completata con successo!")
+                messages.success(request, 'Rete Bayesiana e Permessi configurati!')
+            else:
+                # Se Brownie fallisce, mostriamo l'errore specifico nel banner rosso
+                error_msg = result.stderr if result.stderr else "Errore sconosciuto durante l'esecuzione dello script."
+                print(f"DEBUG: Brownie è fallito con codice {result.returncode}")
+                messages.error(request, f"Errore Brownie: {error_msg}")
+
+        except subprocess.TimeoutExpired:
+            print("DEBUG: Timeout scaduto!")
+            messages.error(request, "Il processo ha impiegato troppo tempo (Timeout).")
+        except Exception as e:
+            print(f"DEBUG: Errore di sistema: {str(e)}")
+            messages.error(request, f"Errore di sistema: {str(e)}")
         
+        print("--- DEBUG: Fine procedura ---\n")
+
     return redirect('dashboard_admin')

@@ -49,8 +49,8 @@ def role_management(ruolo_simulato, studente_target_id):
     cv_s1   = load_json('cv_inserito_s1.json')['CV']
     cv_s2   = load_json('cv_inserito_s2.json')['CV']
     cv_s3   = load_json('cv_inserito_s3.json')['CV']
-    ID_apriorProb = load_json('scelta_aprior_azienda')['ID_apriorProb']
-    ID_apostProb = load_json('scelta_apost_azienda')['ID_apostProb']
+    ID_apriorProb = load_json('scelta_aprior_azienda.json')['ID_apriorProb']
+    ID_apostProb = load_json('scelta_apost_azienda.json')['ID_apostProb']
 
 
     def check_prob(v):
