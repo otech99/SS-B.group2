@@ -31,7 +31,7 @@
         <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img" alt="Logo">
     </div>
     <div class="nav-user">
-        <span class="font-mono">{{ user.username }} (STUDENTE S{{ student_id }})</span>
+        <span class="font-mono">(STUDENTE S{{ student_id }})</span>
         <a href="{% url 'logout' %}" class="btn-nav danger" style="background: #b91c1c; margin-left:15px; text-decoration: none; color: white; padding: 8px 15px; border-radius: 6px;">Logout</a>
     </div>
 </nav>

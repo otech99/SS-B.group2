@@ -17,7 +17,7 @@ def _get_user_role(user):
         return 'Admin'
     elif user.role == 'CERTIFYING_AUTHORITY':
         return 'CertifyingAuthority'
-    elif user.role == 'COMPANY': # <--- AGGIUNGI QUESTO
+    elif user.role == 'COMPANY':
         return 'Company'
     else:
         return 'Student'
@@ -27,7 +27,7 @@ def _redirect_by_role(user):
     if role == 'Admin':
         return redirect('dashboard_admin')
     elif role == 'CertifyingAuthority':
-        return redirect('dashboard_authority')
+        return redirect('dashboard_entecert')
     elif role == 'Company':
         return redirect('dashboard_company')
     else:
@@ -176,12 +176,56 @@ def dashboard_admin(request):
         'users_list': all_users, # Ora gli oggetti u hanno l'attributo u.cv_display
     })
 @login_required
-def dashboard_authority(request):
-    if not request.user.role == 'CERTIFYING_AUTHORITY':
+def dashboard_entecert(request):
+    if not request.user.is_certifying_authority():
         return redirect('home')
-    return render(request, 'certchain/dashboard_authority.html', {
-        'user': request.user,
-    })
+
+    # 1. Prendi tutti gli utenti che hanno il ruolo STUDENT dal database
+    # Usiamo il campo role che hai definito nel tuo CustomUser
+    db_students = CustomUser.objects.filter(role=CustomUser.Role.STUDENT).order_by('student_index')
+
+    base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
+    enriched_students = []
+
+    for s in db_students:
+        # Usiamo lo student_index del DB (es. 1, 2, 3) per trovare i file
+        idx = s.student_index
+        
+        # Se lo studente non ha un indice, saltalo o gestiscilo
+        if idx is None:
+            continue
+
+        libretto_path = os.path.join(base_path, f'Evidenze_s{idx}.json')
+        dichiarazione_path = os.path.join(base_path, f'Dichiarazione_s{idx}.json')
+        
+        status_info = {
+            'id': idx,
+            'username': s.username,
+            'full_name': f"{s.username.capitalize()}", # O un eventuale campo 'first_name'
+            'has_declared': False,
+            'is_valid': False,
+            'details': "In attesa di dichiarazione"
+        }
+
+        # 2. Logica di confronto file
+        if os.path.exists(dichiarazione_path) and os.path.exists(libretto_path):
+            try:
+                with open(libretto_path, 'r') as f1, open(dichiarazione_path, 'r') as f2:
+                    libretto_val = json.load(f1).get('Evidenze', [])
+                    dichiarato_val = json.load(f2).get('Evidenze', [])
+                
+                status_info['has_declared'] = True
+                status_info['is_valid'] = (libretto_val == dichiarato_val)
+                status_info['details'] = "Dati Coerenti" if status_info['is_valid'] else "ERRORE: Dati non corrispondenti"
+            except Exception as e:
+                status_info['details'] = f"Errore lettura: {str(e)}"
+        
+        enriched_students.append(status_info)
+
+    context = {
+        'students': enriched_students,
+    }
+    return render(request, 'certchain/dashboard_entecert.html', context)
 @login_required
 def dashboard_student(request):
     if not request.user.is_student():
@@ -355,7 +399,7 @@ def student_declare(request):
         try:
             # 2. AGGIORNA IL FILE JSON LOCALE
             base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
-            evidenze_path = os.path.join(base_path, f'Evidenze_s{stud_id}.json')
+            evidenze_path = os.path.join(base_path, f'Dichiarazione{stud_id}.json')
             
             with open(evidenze_path, 'w') as f:
                 json.dump({"Evidenze": new_evidences}, f, indent=4)
@@ -383,3 +427,31 @@ def student_declare(request):
             messages.error(request, f"Errore: {str(e)}")
 
     return redirect('dashboard_student')
+@login_required
+def ente_action(request, student_id):
+    if not request.user.is_certifying_authority():
+        return redirect('home')
+
+    if request.method == 'POST':
+        try:
+            blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+            script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
+            
+            # Lancio Brownie: Ruolo EnteCert per lo studente specifico
+            result = subprocess.run(
+                ["brownie", "run", script_path, "main", "EnteCert", str(student_id), "--network", "ganache-local"],
+                cwd=blockchain_path,
+                capture_output=True,
+                text=True,
+                env=os.environ.copy()
+            )
+
+            if "confirmed" in result.stdout or "Evidenze inserite" in result.stdout:
+                messages.success(request, f"Validazione e Calcolo completati per lo Studente {student_id}!")
+            else:
+                messages.error(request, f"Errore: {result.stderr if result.stderr else 'Transazione fallita'}")
+        
+        except Exception as e:
+            messages.error(request, f"Errore di sistema: {str(e)}")
+
+    return redirect('dashboard_entecert')
