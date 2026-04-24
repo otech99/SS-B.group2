@@ -238,7 +238,7 @@ def dashboard_student(request):
         # 2. Percorsi dei file JSON
         base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
         cv_path = os.path.join(base_path, f'cv_inserito_s{student_id}.json')
-        evidenze_path = os.path.join(base_path, f'Evidenze_s{student_id}.json')
+        evidenze_path = os.path.join(base_path, f'Dichiarazione_s{student_id}.json')
 
         # 3. Lettura del CV scelto (Informatica = 1, Elettronica = 2)
         with open(cv_path, 'r') as f:
@@ -388,7 +388,6 @@ def student_declare(request):
     if request.method == 'POST':
         stud_id = request.user.student_index if request.user.student_index else 1
         
-        # 1. Recupera i valori dalle checkbox (1 se selezionato, 0 se no)
         new_evidences = [
             1 if request.POST.get('IDCERT') else 0,
             1 if request.POST.get('CorsoPy') else 0,
@@ -397,31 +396,26 @@ def student_declare(request):
         ]
 
         try:
-            # 2. AGGIORNA IL FILE JSON LOCALE
             base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
-            evidenze_path = os.path.join(base_path, f'Dichiarazione{stud_id}.json')
+            # CORRETTO: Aggiunto underscore per coerenza con la dashboard Ente
+            evidenze_path = os.path.join(base_path, f'Dichiarazione_s{stud_id}.json')
             
             with open(evidenze_path, 'w') as f:
                 json.dump({"Evidenze": new_evidences}, f, indent=4)
             
-            print(f"DEBUG: JSON aggiornato per Studente {stud_id}: {new_evidences}")
-
-            # 3. CHIAMA LA BLOCKCHAIN
             blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
             script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
             
+            # CORRETTO: Aggiunto "main" prima di "Studente"
             result = subprocess.run(
-                ["brownie", "run", script_path, "Studente", str(stud_id), "--network", "ganache-local"],
+                ["brownie", "run", script_path, "main", "Studente", str(stud_id), "--network", "ganache-local"],
                 cwd=blockchain_path, capture_output=True, text=True, env=os.environ.copy()
             )
 
             if "confirmed" in result.stdout:
-                messages.success(request, "Dichiarazione e competenze aggiornate on-chain!")
-            elif "revert" in result.stderr or "revert" in result.stdout:
-                # Gestiamo il caso in cui lo stato è già avanzato
-                messages.warning(request, "Competenze salvate localmente, ma lo stato on-chain non permette una nuova dichiarazione (già inviata).")
+                messages.success(request, "Dichiarazione inviata con successo alla Blockchain!")
             else:
-                messages.success(request, "Competenze aggiornate correttamente!")
+                messages.warning(request, "Dichiarazione salvata, ma verifica lo stato on-chain.")
 
         except Exception as e:
             messages.error(request, f"Errore: {str(e)}")
@@ -437,7 +431,7 @@ def ente_action(request, student_id):
             blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
             script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
             
-            # Lancio Brownie: Ruolo EnteCert per lo studente specifico
+            # Lancio Brownie: Assicurati che l'ordine sia main -> EnteCert -> ID
             result = subprocess.run(
                 ["brownie", "run", script_path, "main", "EnteCert", str(student_id), "--network", "ganache-local"],
                 cwd=blockchain_path,
@@ -449,7 +443,9 @@ def ente_action(request, student_id):
             if "confirmed" in result.stdout or "Evidenze inserite" in result.stdout:
                 messages.success(request, f"Validazione e Calcolo completati per lo Studente {student_id}!")
             else:
-                messages.error(request, f"Errore: {result.stderr if result.stderr else 'Transazione fallita'}")
+                # DEBUG: Stampiamo l'errore nel terminale per capire se è un Revert
+                print(f"BROWNIE ERROR: {result.stderr}")
+                messages.error(request, f"Errore Blockchain: {result.stderr if result.stderr else 'Transazione fallita'}")
         
         except Exception as e:
             messages.error(request, f"Errore di sistema: {str(e)}")

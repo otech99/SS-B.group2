@@ -59,11 +59,11 @@
                             {% if s.has_declared %}
                                 {% if s.is_valid %}
                                     <span class="status-badge" style="padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">
-                                        ✓ {{ s.details }}
+                                        {{ s.details }}
                                     </span>
                                 {% else %}
                                     <span class="status-badge" style="padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
-                                        ⚠ {{ s.details }}
+                                        {{ s.details }}
                                     </span>
                                 {% endif %}
                             {% else %}
