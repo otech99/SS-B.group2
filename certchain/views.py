@@ -231,44 +231,83 @@ def dashboard_student(request):
     if not request.user.is_student():
         return redirect('home')
 
-    # 1. Recuperiamo l'indice dello studente (es. 1, 2 o 3)
+    # 1. Recuperiamo l'indice e il NOME dello studente
     student_id = request.user.student_index if request.user.student_index else 1
-    
+    student_name = request.user.username
     try:
         # 2. Percorsi dei file JSON
         base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
         cv_path = os.path.join(base_path, f'cv_inserito_s{student_id}.json')
-        evidenze_path = os.path.join(base_path, f'Dichiarazione_s{student_id}.json')
+        # Usiamo il file delle evidenze ufficiali per la tabella progressi
+        evidenze_path = os.path.join(base_path, f'Evidenze_s{student_id}.json')
 
-        # 3. Lettura del CV scelto (Informatica = 1, Elettronica = 2)
-        with open(cv_path, 'r') as f:
-            cv_data = json.load(f)
-            # Definiamo la variabile che mancava
-            cv_val = cv_data.get('CV', 1) 
-            cv_scelto = "Percorso Informatico" if cv_val == 1 else "Percorso Elettronico"
+        # 3. Lettura del CV scelto
+        cv_scelto = "Dati non disponibili"
+        if os.path.exists(cv_path):
+            with open(cv_path, 'r') as f:
+                cv_data = json.load(f)
+                cv_val = cv_data.get('CV', 1) 
+                cv_scelto = "Percorso Informatico" if cv_val == 1 else "Percorso Elettronico"
 
         # 4. Lettura delle evidenze (esami)
-        with open(evidenze_path, 'r') as f:
-            evidenze_data = json.load(f)
-            # Creiamo una lista di tuple (NomeEsame, Esito) per il template
-            nomi_esami = ["IDCERT Coding", "Corso Python", "Fondamenti Info", "Ingegneria Soft"]
-            valori_esiti = evidenze_data.get('Evidenze', [0, 0, 0, 0])
-            evidenze_list = zip(nomi_esami, valori_esiti)
+        valori_esiti = [0, 0, 0, 0]
+        if os.path.exists(evidenze_path):
+            with open(evidenze_path, 'r') as f:
+                evidenze_data = json.load(f)
+                valori_esiti = evidenze_data.get('Evidenze', [0, 0, 0, 0])
+        
+        nomi_esami = ["IDCERT Coding", "Corso Python", "Fondamenti Info", "Ingegneria Soft"]
+        # Trasformiamo in list perché zip() è un iteratore consumabile una sola volta
+        evidenze_list = list(zip(nomi_esami, valori_esiti))
 
-        # 5. Stato (Per ora lo mettiamo fisso, poi lo leggeremo dalla Blockchain)
+        # 5. Recupero Stato Reale dalla Blockchain
         state = "IDLE" 
+        blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+        
+        result = subprocess.run(
+            ["brownie", "run", "scripts/Role_based_txn.py", "main", "GetState", str(student_id), "--network", "ganache-local"],
+            cwd=blockchain_path,
+            capture_output=True,
+            text=True,
+            env=os.environ.copy()
+        )
+
+        state_mapping = {
+            "0": "EVIDENCE NOT DECLARED",
+            "1": "EVIDENCE_DECLARED",
+            "2": "EVIDENCE_VERIFIED",
+            "3": "READY_FOR_CALC",
+            "4": "VALIDATO"
+        }
+
+        # Estrazione robusta: cerchiamo tra tutte le righe dell'output
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if "RAW_STATE:" in line:
+                    raw_val = line.split("RAW_STATE:")[1].strip().split()[0]
+                    state = state_mapping.get(raw_val, "UNKNOWN")
+                    break
+        else:
+            print(f"BROWNIE ERROR: {result.stderr}")
+            state = "BLOCKCHAIN_ERROR"
 
     except Exception as e:
-        print(f"Errore nel caricamento dati studente: {e}")
-        cv_scelto = "Dati non disponibili"
+        print(f"Errore critico dashboard_student: {e}")
+        cv_scelto = "Errore Caricamento"
         evidenze_list = []
         state = "ERROR"
 
     context = {
         'student_id': student_id,
-        'cv_scelto': cv_scelto,      # <-- Ora è definita!
+        'student_name': student_name,
+        'cv_scelto': cv_scelto,     
         'evidenze': evidenze_list,
         'state': state,
+        # Valori singoli per i checkbox del secondo form
+        'idcert_val': valori_esiti[0],
+        'corsopy_val': valori_esiti[1],
+        'fondinfo_val': valori_esiti[2],
+        'ingsoft_val': valori_esiti[3],
     }
     
     return render(request, 'certchain/dashboard_student.html', context)

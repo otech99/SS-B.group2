@@ -131,6 +131,10 @@ def role_management(ruolo_simulato, studente_target_id):
         print(f"BasiProg (A Priori): {res_prior / Fattore}")
         print(f"BasiProg (A Posteriori): {res_apost / Fattore}\n")
 
+    elif ruolo_simulato == "GetState":
+        current_state = contract_bn.studentState(target_student_account.address)
+        print(f"RAW_STATE: {current_state}")
+
     else:
         print("\nIl ruolo inserito non è valido, potrebbe contenere errori grammaticali, di punteggiatura o "
                "di spazi.\nLa preghiamo di controllare e di riprovare.\n")

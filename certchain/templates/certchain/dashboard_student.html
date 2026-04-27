@@ -54,12 +54,20 @@
 
         <div class="admin-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
             <div class="step" style="border-top: 4px solid var(--accent-gold); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Username</p>
+                <h3 style="margin: 5px 0; color: var(--text-dark);">{{ student_name }}</h3>
+            </div>
+            <div class="step" style="border-top: 4px solid var(--accent-gold); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                 <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Percorso Formativo</p>
                 <h3 style="margin: 5px 0; color: var(--text-dark);">{{ cv_scelto }}</h3>
             </div>
             <div class="step" style="border-top: 4px solid var(--accent-teal); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                 <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">ID Blockchain</p>
                 <h3 class="font-mono" style="margin: 5px 0; color: var(--text-dark);">Student_S{{ student_id }}</h3>
+            </div>
+            <div class="step" style="border-top: 4px solid var(--accent-teal); background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Stato</p>
+                <h3 class="font-mono" style="margin: 5px 0; color: var(--text-dark);">{{ state }}</h3>
             </div>
         </div>
 

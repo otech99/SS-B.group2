@@ -50,6 +50,7 @@
             <div class="alert-warning">Contratto non ancora deployato</div>
         {% endif %}
 
+        <div class="form-actions" style="margin-top:1.5rem;">
         <form method="post" action="/deploy/" style="margin-top:20px;">
           {% csrf_token %}
           <button  type="submit" class="btn-primary">
@@ -57,8 +58,9 @@
           </button>
         </form>
         {% if contract_address %}
-            <p class="form-note">Il contratto è già stato deployato.</p>
+            
         {% endif %}
+      </div>
       </div>
     </section>
 
@@ -118,7 +120,7 @@
               <button type="submit" class="btn-primary">Inizializza Rete Bayesiana</button>
             </form>
             {% if is_initialized %}
-              <p class="form-note">La rete è già stata inizializzata.</p>
+              
             {% endif %}
           </div>
         </div>
@@ -127,7 +129,7 @@
 
       <!-- ── SEZIONE 3: GESTIONE STUDENTI ── -->
       <section class="section" style="padding: 40px 0;">
-        <div class="section-label">Gestione Studenti</div>
+        <div class="section-label">Gestione Utenti</div>
         
        
         <!-- Lista studenti -->
@@ -141,7 +143,6 @@
                 <th>CV</th>
                 <th>Index</th>
                 <th>Ruolo</th>
-                <th>Data Registrazione</th>
             </tr>
         </thead>
         <tbody>
@@ -167,7 +168,6 @@
                         {{ u.role }}
                     </span>
                 </td>
-                <td style="color: #64748b;">{{ u.date_joined|date:"d/m/Y" }}</td>
             </tr>
             {% empty %}
             <tr>
