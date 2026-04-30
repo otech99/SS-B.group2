@@ -5,40 +5,62 @@
     <meta charset="UTF-8">
     <title>Dashboard Azienda — CertChain</title>
     <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="dashboard-body">
+<body>
     <nav class="navbar">
+    <div class="nav-logo">
         <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
-        <div class="nav-user"><span>Area Aziende</span></div>
-    </nav>
+    </div>
+    <div class="nav-user">
+        <span class="font-mono">AZIENDA</span>
+        <a href="{% url 'logout' %}" class="btn-nav danger" style="background: #b91c1c; margin-left:15px; text-decoration: none; color: white; padding: 8px 15px; border-radius: 6px;">Logout</a>
+    </div>
+</nav>
 
-    <main class="main-content" style="margin-left:0; padding: 40px 10%;">
-        <div class="search-section">
-            <form method="post" style="display:flex; gap:10px; max-width:600px; margin: 0 auto 40px;">
-                {% csrf_token %}
-                <input type="text" name="search" placeholder="Cerca studente per username..." class="field input" style="flex:1; margin:0;">
-                <button type="submit" class="btn-primary">Cerca</button>
-            </form>
-        </div>
-
-        <div class="results-container">
-            <div class="card cert-card">
-                <div class="cert-header">
-                    <h3>Studente: <span class="text-teal">mario_rossi</span></h3>
-                    <span class="status-badge verified">Certificato</span>
-                </div>
-                <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-                <div class="prob-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <div>
-                        <small>Competenza: Basi Prog</small>
-                        <p class="font-mono" style="font-size:1.5rem;">89%</p>
-                    </div>
-                    <div>
-                        <small>Competenza: Prog Python</small>
-                        <p class="font-mono" style="font-size:1.5rem;">72%</p>
-                    </div>
-                </div>
-            </div>
+    <main class="main-content" style="padding: 40px 5%;">
+        <header style="margin-bottom: 30px;">
+            <h1 style="color: #2c3e50;">Monitoraggio Candidati</h1>
+        </header>
+        <div class="table-container">
+        <section class="results-table-container">
+            <table class="admin-table">
+                <thead style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                    <tr>
+                        <th style="padding: 15px; text-align: left;">Studente</th>
+                        <th style="padding: 15px; text-align: center;">Stato</th>
+                        <th style="padding: 15px; text-align: center;">A Priori (CV)</th>
+                        <th style="padding: 15px; text-align: center;">A Posteriori (BC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in studenti %}
+                    <tr>
+                        <td><strong>{{ s.username }}</strong></td>
+                        <td style="text-align: center; vertical-align: middle;">
+                            {% if s.onchain_state == 2 %}
+                                <span style="background-color: #e6fffa; color: #047481; border: 1px solid #b2f5ea; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="width: 8px; height: 8px; background-color: #38b2ac; border-radius: 50%;"></span>
+                                    VALIDATO
+                                </span>
+                            {% else %}
+                                <span style="background-color: #f7fafc; color: #4a5568; border: 1px solid #edf2f7; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="width: 8px; height: 8px; background-color: #a0aec0; border-radius: 50%;"></span>
+                                    IN ATTESA
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center; font-family: 'JetBrains Mono';">{{ s.onchain_prior }}%</td>
+                        <td style="text-align: center; font-family: 'JetBrains Mono'; color: #20c997; font-weight: bold;">{{ s.onchain_apost }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="padding: 30px; text-align: center; color: #999;">Nessun candidato presente nel sistema.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
         </div>
     </main>
 </body>

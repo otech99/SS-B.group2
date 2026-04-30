@@ -313,13 +313,115 @@ def dashboard_student(request):
     return render(request, 'certchain/dashboard_student.html', context)
 @login_required
 def dashboard_company(request):
-    # Controlla se l'utente ha il ruolo corretto (adattalo al tuo modello CustomUser)
-    if request.user.role != 'COMPANY': 
+    """
+    Dashboard per l'azienda che interroga direttamente la Blockchain 
+    tramite Brownie per verificare lo stato reale dei candidati.
+    """
+    # 1. Controllo sicurezza ruolo: solo le aziende possono accedere
+    if request.user.role != 'COMPANY':
         return redirect('home')
+
+    # 2. Recuperiamo gli studenti che hanno un ID assegnato nel sistema
+    studenti_db = CustomUser.objects.filter(role='STUDENT').exclude(student_index__isnull=True)
+    
+    studenti_con_dati_onchain = []
+
+    for s in studenti_db:
+        # Inizializziamo i valori di default per evitare errori nel template
+        s.onchain_state = 0   # 0 = In Attesa, 2 = Validato
+        s.onchain_prior = 0
+        s.onchain_apost = 0
+
+        try:
+            # 3. Esecuzione dello script Brownie in modalità sola lettura (Azienda)
+            # Passiamo l'indice dello studente come argomento
+            result = subprocess.run(
+                ["brownie", "run", "scripts/Role_based_txn.py", "main", "Azienda", str(s.student_index), "--network", "ganache-local"],
+                cwd="/home/otmane/SS-B-G2/blockchain",
+                capture_output=True, 
+                text=True,
+                timeout=15
+            )
+
+            output = result.stdout
+            
+            # 4. Parsing dell'output dello script
+            # Cerchiamo le righe stampate da Brownie e convertiamo i decimali in percentuali
+            for line in output.splitlines():
+                if "A Priori" in line and ":" in line:
+                    try:
+                        val_str = line.split(":")[1].strip()
+                        s.onchain_prior = int(float(val_str) * 100)
+                    except ValueError:
+                        pass
+                
+                if "A Posteriori" in line and ":" in line:
+                    try:
+                        val_str = line.split(":")[1].strip()
+                        s.onchain_apost = int(float(val_str) * 100)
+                    except ValueError:
+                        pass
+
+            # 5. Logica a 2 Stati semplificata
+            # Consideriamo lo studente VALIDATO (2) solo se esiste un valore on-chain calcolato
+            if s.onchain_apost > 0:
+                s.onchain_state = 2
+            else:
+                s.onchain_state = 0
+
+        except Exception as e:
+            # Log degli errori nel terminale per il debug, ma la pagina continua a caricare
+            print(f"--- Errore lettura Blockchain per {s.username}: {e} ---")
         
+        # Aggiungiamo l'oggetto studente arricchito alla lista finale
+        studenti_con_dati_onchain.append(s)
+
+    # 6. Invio dei dati al template per la visualizzazione nella tabella
     return render(request, 'certchain/dashboard_company.html', {
-        'user': request.user,
+        'studenti': studenti_con_dati_onchain,
     })
+@login_required
+def company_view_report(request, student_id):
+    if not request.user.is_company():
+        return redirect('home')
+
+    # 1. Troviamo lo studente nel DB
+    studente = get_object_or_404(CustomUser, student_index=student_id)
+
+    try:
+        blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
+        script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
+        
+        # 2. Lanciamo Brownie con l'azione "Azienda"
+        # L'azienda non ha bisogno di passare la propria chiave per la lettura pubblica
+        result = subprocess.run(
+            ["brownie", "run", script_path, "main", "Azienda", str(student_id), "--network", "ganache-local"],
+            cwd=blockchain_path,
+            capture_output=True,
+            text=True,
+            env=os.environ.copy()
+        )
+
+        # 3. Parsing dell'output (cerca le righe stampate dallo script)
+        prior = "N/D"
+        apost = "N/D"
+        
+        for line in result.stdout.splitlines():
+            if "BasiProg (A Priori):" in line:
+                prior = line.split(":")[1].strip()
+            if "BasiProg (A Posteriori):" in line:
+                apost = line.split(":")[1].strip()
+
+        return render(request, 'certchain/azienda_report_detail.html', {
+            'studente': studente,
+            'prior': prior,
+            'apost': apost,
+            'raw_output': result.stdout # Utile per debug
+        })
+
+    except Exception as e:
+        messages.error(request, f"Errore durante il recupero dei dati: {str(e)}")
+        return redirect('dashboard_company')
 
 @login_required
 def create_user(request):

@@ -16,4 +16,5 @@ urlpatterns = [
     path('dashboard/admin/init-bn/',    views.init_bn,      name='init_bn'),
     path('dashboard/admin/create-user/', views.create_user, name='create_user'),
     path("deploy/", views.deploy_contract, name="deploy_contract"),
+    path('dashboard/company/report/<int:student_id>/', views.company_view_report, name='azienda_view_report'),
 ]
