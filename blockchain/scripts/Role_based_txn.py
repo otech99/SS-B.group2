@@ -1,169 +1,163 @@
-from brownie import accounts, Contract_bn 
-from eth_utils import keccak
-import json
 import os
+import sys
+import json
+import django
+from pathlib import Path
+from brownie import accounts, Contract_bn
+
+# --- 1. CONFIGURAZIONE PERCORSI DINAMICI ---
+# Risale dal file attuale fino alla radice del progetto SS-B-G2
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(BASE_DIR))
+
+# Inizializzazione Django per accedere ai Modelli (CustomUser)
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'certchain_project.settings')
+django.setup()
+
+from certchain.models import CustomUser
+
+# --- 2. FUNZIONI DI SUPPORTO ---
 
 def load_json(filename):
-    # Carica i dati dai file JSON nella cartella data/json
-    path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'json', filename)
+    """Carica i dati JSON dalla cartella data/json usando percorsi dinamici."""
+    path = BASE_DIR / 'data' / 'json' / filename
+    if not path.exists():
+        return None
     with open(path, 'r') as f:
         return json.load(f)
 
+def get_student_data(student_idx, cv_inf, cv_ele, fattore):
+    """Recupera evidenze e calcola i dati Bayesiani per uno studente specifico."""
+    evidenze_file = load_json(f'Evidenze_s{student_idx}.json')
+    cv_file = load_json(f'cv_inserito_s{student_idx}.json')
+
+    if not evidenze_file or not cv_file:
+        return None
+
+    cv_scelto = cv_file.get('CV', 1)
+    # Selezione del set di probabilità a priori (Informatico o Elettronico)
+    source_cv = cv_inf if cv_scelto == 1 else cv_ele
+
+    return {
+        'BasiProg': int(source_cv['BasiProg'] * fattore),
+        'ProgPy':   int(source_cv['ProgPy']   * fattore),
+        'evidenze': evidenze_file['Evidenze'],
+    }
+
+# --- 3. LOGICA PRINCIPALE ---
+
 def role_management(ruolo_simulato, studente_target_id):
-    # Recupero indirizzo contratto dal file generato dal deploy
-    with open("contract_address.json") as f:
+    # Recupero indirizzo contratto
+    addr_file = BASE_DIR / 'blockchain' / 'contract_address.json'
+    with open(addr_file) as f:
         addr = json.load(f)["address"]
     contract_bn = Contract_bn.at(addr)
 
-    # Caricamento dei vari Account dal .env tranne quello degli studenti
-    account_Admin    = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
-    account_EnteCert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
-    account_Azienda  = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
+    # Account istituzionali firmati dal backend (.env)
+    account_admin    = accounts.add(os.environ.get("PRIVATE_KEY_Admin"))
+    account_entecert = accounts.add(os.environ.get("PRIVATE_KEY_EnteCert"))
+    account_azienda  = accounts.add(os.environ.get("PRIVATE_KEY_Azienda"))
     
-    # Lista studenti autorizzati (mettere quelli creati nel .env)
-    studenti = {
-        1: accounts.add(os.environ.get("PRIVATE_KEY_Studente")),
-        2: accounts.add(os.environ.get("PRIVATE_KEY_Studente2")),
-        3: accounts.add(os.environ.get("PRIVATE_KEY_Studente3")),
-        #4: accounts.add(os.environ.get("PRIVATE_KEY_Studente4")),
-        #5: accounts.add(os.environ.get("PRIVATE_KEY_Studente5")),
-        #6: accounts.add(os.environ.get("PRIVATE_KEY_Studente6")),
-        #7: accounts.add(os.environ.get("PRIVATE_KEY_Studente7"))
-
-    }
+    # --- RECUPERO STUDENTI DAL DATABASE ---
+    # Prendiamo tutti gli utenti con ruolo STUDENT che hanno collegato MetaMask
+    studenti_db = CustomUser.objects.filter(role='STUDENT').exclude(wallet_address__isnull=True)
+    studenti_map = {s.student_index: s.wallet_address for s in studenti_db}
     
-    target_student_account = studenti[studente_target_id]
+    if not studenti_map:
+        print("Errore: Nessuno studente con wallet trovato nel Database.")
+        return
 
-    # Preparazione dati Bayesiani 
-    Fattore = 1000
-    #-----------------------------------------------------------------
-    #Controllare se le probabilità inserite non sforano il range [0,1]
-    #-----------------------------------------------------------------
-
-    cv_inf   = load_json('cv_informatico.json')
+    # Parametri globali Rete Bayesiana
+    FATTORE = 1000
+    cv_inf = load_json('cv_informatico.json')
     cv_ele = load_json('cv_elettronico.json')
-    cpt      = load_json('cpt.json')
-    evidenze_s1 = load_json('Evidenze_s1.json')['Evidenze']
-    evidenze_s2 = load_json('Evidenze_s2.json')['Evidenze']
-    evidenze_s3 = load_json('Evidenze_s3.json')['Evidenze']
-    cv_s1   = load_json('cv_inserito_s1.json')['CV']
-    cv_s2   = load_json('cv_inserito_s2.json')['CV']
-    cv_s3   = load_json('cv_inserito_s3.json')['CV']
-    ID_apriorProb = load_json('scelta_aprior_azienda.json')['ID_apriorProb']
-    ID_apostProb = load_json('scelta_apost_azienda.json')['ID_apostProb']
+    cpt = load_json('cpt.json')
 
-
-    def check_prob(v):
-        if not (0 <= v <= 1000):
-            raise ValueError(f"Valore non valido: {v}")
-        return v
-
-    dati_studenti = {
-        1: {
-            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s1 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
-            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s1 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
-            'evidenze': evidenze_s1,
-        },
-        2: {
-            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s2 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
-            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s2 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
-            'evidenze': evidenze_s2,
-        },
-
-        3: {
-            'BasiProg': check_prob(int(cv_inf['BasiProg'] * Fattore)) if cv_s3 == 1 else check_prob(int(cv_ele['BasiProg'] * Fattore)),
-            'ProgPy':   check_prob(int(cv_inf['ProgPy']   * Fattore)) if cv_s3 == 1 else check_prob(int(cv_ele['ProgPy']   * Fattore)),
-            'evidenze': evidenze_s3,
-        },
-    }
-
-    IDCERTprob_struct   = tuple(check_prob(int(v * Fattore)) for v in cpt['IDCERT'].values())
-    CorsoPyprob_struct  = tuple(check_prob(int(v * Fattore)) for v in cpt['CorsoPy'].values())
-    FondInfoprob_struct = tuple(check_prob(int(v * Fattore)) for v in cpt['FondInfo'].values())
-    IngSoftprob_struct  = tuple(check_prob(int(v * Fattore)) for v in cpt['IngSoft'].values())
-
-    # Gestione Ruoli tramite Hash 
-    hash_ruolo = keccak(ruolo_simulato.encode('utf-8'))
+    # Hash Ruolo (standard OpenZeppelin AccessControl)
     STUDENTE_ROLE_HASH = "0xc0cd2e616535ef39d3e47c23fef2910aa6d6610ec0ef24d4c2909f5fc44601fc"
 
+    # --- AZIONI PER RUOLO ---
+
     if ruolo_simulato == "Admin":
-        print(f"[Admin] Generazione dell'autorizzazione per gli studenti in corso...")
-        for s_id, s_acc in studenti.items():
-            print(f"Abilitazione accesso per Studente {s_id}: {s_acc.address}")
-            contract_bn.grantRole(STUDENTE_ROLE_HASH, s_acc.address, {"from": account_Admin})
+        print(f"\n[ADMIN] Inizializzazione massiva per {len(studenti_map)} studenti...")
 
-        # Array paralleli con tutti gli studenti e i loro prior
-        # Costruiti indipendentemente da studente_target_id
-        students_addresses = [studenti[s_id].address for s_id in sorted(studenti)]
-        basi_prog_values   = [dati_studenti[s_id]['BasiProg'] for s_id in sorted(studenti)]
-        prog_py_values     = [dati_studenti[s_id]['ProgPy']   for s_id in sorted(studenti)]
+        # Prepariamo le liste per la chiamata in blocco
+        list_addresses = []
+        list_basi_prog = []
+        list_prog_py = []
 
-        print(f"[Admin] Inizializzazione CPT e prior per tutti gli studenti...")
-        contract_bn.set_apriorProb(
-            students_addresses,
-            basi_prog_values,
-            prog_py_values,
-            IDCERTprob_struct,
-            CorsoPyprob_struct,
-            FondInfoprob_struct,
-            IngSoftprob_struct,
-            {"from": account_Admin}
-        )
-        print("Configurazione Admin completata con successo.\n")
+        IDCERT_cpt   = tuple(int(v * FATTORE) for v in cpt['IDCERT'].values())
+        CorsoPy_cpt  = tuple(int(v * FATTORE) for v in cpt['CorsoPy'].values())
+        FondInfo_cpt = tuple(int(v * FATTORE) for v in cpt['FondInfo'].values())
+        IngSoft_cpt  = tuple(int(v * FATTORE) for v in cpt['IngSoft'].values())
 
-    elif ruolo_simulato == "Studente":
-        print(f"[Studente {studente_target_id}] ({target_student_account.address}) dichiara la partecipazione.")
-        contract_bn.studentDeclaredEvidence({"from": target_student_account})
-        print(f"Stato aggiornato a EVIDENCE_DECLARED.\n")
+        for s_idx, s_addr in studenti_map.items():
+            data = get_student_data(s_idx, cv_inf, cv_ele, FATTORE)
+            if data:
+                print(f" -> Assegno ruolo Studente a: {s_addr} (s{s_idx})")
+                try:
+                    # Grant Role lo facciamo uno per volta, va bene
+                    contract_bn.grantRole(STUDENTE_ROLE_HASH, s_addr, {"from": account_admin})
+                except Exception as e:
+                    print(f"    [⚠️] Impossibile assegnare ruolo: {e}")
 
+                # Aggiungiamo i dati alle liste
+                list_addresses.append(s_addr)
+                list_basi_prog.append(data['BasiProg'])
+                list_prog_py.append(data['ProgPy'])
+
+        # ORA FACCIAMO LA CHIAMATA MASSIVA AL CONTRATTO
+        print(f"\n -> Caricamento Probabilità a Priori in blocco nella Blockchain...")
+        try:
+            contract_bn.set_apriorProb(
+                list_addresses,
+                list_basi_prog,
+                list_prog_py,
+                IDCERT_cpt,
+                CorsoPy_cpt,
+                FondInfo_cpt,
+                IngSoft_cpt,
+                {"from": account_admin}
+            )
+            print(" [✅] Probabilità inizializzate con successo per tutti gli studenti!")
+        except Exception as e:
+            print(f" [⏭️] Errore o Probabilità già presenti. Dettaglio: {e}")
+
+        print("\n[ADMIN] Configurazione massiva completata.\n")
     elif ruolo_simulato == "EnteCert":
-        print(f"[EnteCert] Caricamento dati per Studente {studente_target_id}...")
-        contract_bn.set_Evidence(target_student_account.address, dati_studenti[studente_target_id]['evidenze'], {"from": account_EnteCert})
-        contract_bn.enablePosteriorCalc(target_student_account.address, {"from": account_EnteCert})
-        contract_bn.update_apostProb(target_student_account.address, {"from": account_EnteCert})
-        print(f"Evidenze inserite per lo studente {studente_target_id}.\n")
+        target_addr = studenti_map.get(studente_target_id)
+        if not target_addr:
+            print(f"Errore: Studente {studente_target_id} non trovato.")
+            return
+
+        print(f"[ENTECERT] Validazione evidenze per: {target_addr}")
+        data = get_student_data(studente_target_id, cv_inf, cv_ele, FATTORE)
+        
+        # Sequenza di validazione e calcolo
+        contract_bn.set_Evidence(target_addr, data['evidenze'], {"from": account_entecert})
+        contract_bn.enablePosteriorCalc(target_addr, {"from": account_entecert})
+        contract_bn.update_apostProb(target_addr, {"from": account_entecert})
+        print(f"[ENTECERT] Calcolo Bayesiano a posteriori completato.")
 
     elif ruolo_simulato == "Azienda":
-        #print(f"[Azienda] Lettura risultati finali per studente {studente_target_id}:")
-        res_prior = contract_bn.get_apriorInfoFacts(target_student_account.address, ID_apriorProb, {"from": account_Azienda})
-        res_apost = contract_bn.get_apostInfoFacts(target_student_account.address, ID_apostProb, {"from": account_Azienda})
-        print(f"[Azienda] REPORT FINALE PER STUDENTE {studente_target_id}:\n")
-        print(f"BasiProg (A Priori): {res_prior / Fattore}")
-        print(f"BasiProg (A Posteriori): {res_apost / Fattore}\n")
+        target_addr = studenti_map.get(studente_target_id)
+        # ID per recupero variabili specifiche (es. BasiProg)
+        ID_aprior = load_json('scelta_aprior_azienda.json')['ID_apriorProb']
+        ID_apost  = load_json('scelta_apost_azienda.json')['ID_apostProb']
 
-    elif ruolo_simulato == "GetState":
-        current_state = contract_bn.studentState(target_student_account.address)
-        print(f"RAW_STATE: {current_state}")
+        res_prior = contract_bn.get_apriorInfoFacts(target_addr, ID_aprior, {"from": account_azienda})
+        res_apost = contract_bn.get_apostInfoFacts(target_addr, ID_apost, {"from": account_azienda})
+
+        print(f"\n[AZIENDA] Risultati per Studente {studente_target_id}:")
+        print(f" > Probabilità A Priori:   {res_prior / FATTORE}")
+        print(f" > Probabilità A Posteriori: {res_apost / FATTORE}")
 
     else:
-        print("\nIl ruolo inserito non è valido, potrebbe contenere errori grammaticali, di punteggiatura o "
-               "di spazi.\nLa preghiamo di controllare e di riprovare.\n")
-
-
-#def main():
-    # Modificare il ruolo e il numero dello studente per testare il funzionamento
-
-    #ruolo = "Admin"    # "Admin", "Studente", "EnteCert", "Azienda"
-    #studente = 2    # Inserire il numero dello studente di cui vogliamo fare il test
-    
-    
-    #role_management(ruolo, studente)
+        print(f"Ruolo '{ruolo_simulato}' non gestito o non riconosciuto.")
 
 def main(*args):
-    # Valori di default nel caso lo lanci senza parametri dal terminale
-    ruolo = "Admin"
-    studente = 1
-
-    # Se passiamo argomenti (es: brownie run scripts/Role_based_txn.py Studente 2)
-    if args:
-        ruolo = args[0]
-        if len(args) > 1:
-            studente = int(args[1])
-
-    print(f"\n--- [BROWNIE SCRIPT] ---")
-    print(f"Azione: {ruolo}")
-    print(f"Target Studente ID: {studente}")
-    print(f"------------------------\n")
+    # Utilizzo: brownie run scripts/role_management.py main [Ruolo] [ID_Studente]
+    ruolo = args[0] if args else "Admin"
+    studente_id = int(args[1]) if len(args) > 1 else 1
     
-    # Chiama la tua funzione esistente con i nuovi parametri dinamici
-    role_management(ruolo, studente)
+    role_management(ruolo, studente_id)

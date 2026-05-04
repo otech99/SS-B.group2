@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/*Errori di Logica e Sicurezza (Priorità Alta)
-Questi avvisi indicano che il codice potrebbe comportarsi in modo inaspettato o che mancano definizioni fondamentali.
-Riga 107:5 (Visibility): Non hai dichiarato se la funzione è public, external o internal. Nelle versioni recenti di Solidity, la visibilità deve essere esplicita.
-Riga 50 (Unused variables): Le variabili _student, required1 e required2 sono dichiarate ma non usate.
-Perché è importante: Indica che forse hai dimenticato di scrivere un pezzo di logica o che stai sprecando memoria (e quindi gas).
-Righe 158 e 174 (Empty blocks): Hai delle funzioni o dei blocchi di codice vuoti. Se sono intenzionali (come un costruttore vuoto), aggiungi un commento all'interno, altrimenti eliminali. */
-
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Contract_bn is AccessControl {
@@ -29,17 +22,14 @@ contract Contract_bn is AccessControl {
     bool public isSystemInitialized = false; 
 
     // Mapping: lo "schedario" per gestire infiniti studenti
-    // Serve per associare in modo univoco una chiave (in questo caso l'indirizzo del wallet, address) a un valore specifico.
-    mapping(address => State) public studentState; // Questo mapping associa l'indirizzo di ogni studente al suo stato attuale nel processo
-    mapping(address => uint[4]) public studentEvidence; // Associa l'indirizzo di uno studente a un uint[4] corrispondente 
-                                                        // ai voti o i risultati delle 4 prove/certificazioni associate a quel particolare indirizzo.
-    mapping(address => uint16) internal student_apost_BasiProg; // Memorizza la probabilità a posteriori calcolata dal sistema riguardante 
-                                                                // la competenza "BasiProg" per quello specifico studente.
-    mapping(address => uint16) internal student_apost_ProgPy; // Salva il risultato del calcolo della probabilità a posteriori per la competenza "ProgPy" dello studente.
+    mapping(address => State) public studentState; 
+    mapping(address => uint[4]) public studentEvidence; 
+                                                        
+    mapping(address => uint16) internal student_apost_BasiProg; 
+    mapping(address => uint16) internal student_apost_ProgPy; 
 
     mapping(address => uint16) internal student_prior_BasiProg;
     mapping(address => uint16) internal student_prior_ProgPy;
-    
     
     // Evento aggiornato per tracciare lo stato del singolo studente
     event StudentStateChanged(address indexed student, State oldState, State newState);
@@ -54,13 +44,12 @@ contract Contract_bn is AccessControl {
         _;
     }
 
-    modifier doubleStudentState(address _student,State required1,State required2){
+    modifier doubleStudentState(address _student, State required1, State required2){
         require(
-        studentState[msg.sender] == State.NOT_INITIALIZED || 
-        studentState[msg.sender] == State.VIEW_PROB, 
-        "Devi essere in stato NOT_INITIALIZED o VIEW_PROB"
+            studentState[_student] == required1 || 
+            studentState[_student] == required2, 
+            "Devi essere in stato NOT_INITIALIZED o VIEW_PROB"
         );
-
         _;
     }
 
@@ -69,8 +58,6 @@ contract Contract_bn is AccessControl {
         emit StudentStateChanged(_student, studentState[_student], newState);
         studentState[_student] = newState;
     }
-
-
 
     struct IDCERTProb {
         uint16 IDCERT_FF;
@@ -109,7 +96,7 @@ contract Contract_bn is AccessControl {
 
     OffChain_Info public prob;
 
-     // COSTRUTTORE
+    // --- COSTRUTTORE ---
     
     constructor(
         address _admin,
@@ -124,45 +111,55 @@ contract Contract_bn is AccessControl {
         _grantRole(Studente, _studente);
     }
 
-   
-    // FUNZIONI GLOBALI (Admin)
+    // --- FUNZIONI GLOBALI (Admin) ---
+
+    // Permette all'Admin di registrare in modo dinamico i wallet dei nuovi studenti (Fondamentale per MetaMask)
+    function registerNewStudent(address _newStudentWallet) external onlyRole(Admin) {
+        _grantRole(Studente, _newStudentWallet);
+    }
     
     function set_apriorProb(
-    address[]    calldata _students,
-    uint16[]     calldata _BasiProgValues,
-    uint16[]     calldata _ProgPyValues,
-    IDCERTProb   calldata _IDCERTprob,
-    CorsoPyProb  calldata _CorsoPyprob,
-    FondInfoProb calldata _FondInfoprob,
-    IngSoftProb  calldata _IngSoftprob
-)
-    external
-    onlyRole(Admin)
-{
-    require(!isSystemInitialized, "Probabilita' gia' inizializzate");
+        address[]    calldata _students,
+        uint16[]     calldata _BasiProgValues,
+        uint16[]     calldata _ProgPyValues,
+        IDCERTProb   calldata _IDCERTprob,
+        CorsoPyProb  calldata _CorsoPyprob,
+        FondInfoProb calldata _FondInfoprob,
+        IngSoftProb  calldata _IngSoftprob
+    )
+        external
+        onlyRole(Admin)
+    {
+        require(!isSystemInitialized, "Probabilita' gia' inizializzate");
 
-    // CPT globali della rete bayesiana
-    prob.prob_IDCERT   = _IDCERTprob;
-    prob.prob_CorsoPy  = _CorsoPyprob;
-    prob.prob_FondInfo = _FondInfoprob;
-    prob.prob_IngSoft  = _IngSoftprob;
+        // CPT globali della rete bayesiana
+        prob.prob_IDCERT   = _IDCERTprob;
+        prob.prob_CorsoPy  = _CorsoPyprob;
+        prob.prob_FondInfo = _FondInfoprob;
+        prob.prob_IngSoft  = _IngSoftprob;
 
-    // Prior per-studente: scritti nel mapping di ciascuno, nessuna sovrascrittura
-    for (uint256 i = 0; i < _students.length; ++i) {
-        student_prior_BasiProg[_students[i]] = _BasiProgValues[i];
-        student_prior_ProgPy[_students[i]]   = _ProgPyValues[i];
+        // Prior per-studente: scritti nel mapping di ciascuno, nessuna sovrascrittura
+        for (uint256 i = 0; i < _students.length; ++i) {
+            student_prior_BasiProg[_students[i]] = _BasiProgValues[i];
+            student_prior_ProgPy[_students[i]]   = _ProgPyValues[i];
+        }
+
+        isSystemInitialized = true;
     }
-
-    isSystemInitialized = true;
-}
     
+    // --- FUNZIONI OPERATIVE ---
+
     function studentDeclaredEvidence()
-    external
-    onlyRole(Studente)
-    onlyIfSystemInitialized
-    doubleStudentState(msg.sender, State.NOT_INITIALIZED, State.VIEW_PROB)
-    transitionStudentTo(msg.sender, State.EVIDENCE_DECLARED)
-{}
+        external
+        onlyRole(Studente)
+        onlyIfSystemInitialized
+        doubleStudentState(msg.sender, State.NOT_INITIALIZED, State.VIEW_PROB)
+        transitionStudentTo(msg.sender, State.EVIDENCE_DECLARED)
+    {
+        // INTENZIONALMENTE VUOTO: 
+        // La logica di transizione di stato e il controllo degli accessi (msg.sender)
+        // sono gestiti interamente e in modo sicuro dai modificatori.
+    }
 
     function set_Evidence(address _student, uint[4] calldata _Evidence)
         external
@@ -178,7 +175,10 @@ contract Contract_bn is AccessControl {
         onlyRole(EnteCert)
         onlyInStudentState(_student, State.EVIDENCE_VERIFIED)
         transitionStudentTo(_student, State.READY_FOR_CALC)
-    {}
+    {
+        // INTENZIONALMENTE VUOTO:
+        // Transizione di stato gestita dal modificatore transitionStudentTo.
+    }
 
     function calculate_apostProb(address _student) internal view returns (uint16,uint16) {
         uint256 fattore = 1000;
@@ -188,7 +188,7 @@ contract Contract_bn is AccessControl {
         uint256 EvidenceProb_TF = EvidenceProb(_student, prob.prob_IDCERT.IDCERT_TF, prob.prob_CorsoPy.CorsoPy_TF, prob.prob_FondInfo.FondInfo_TF, prob.prob_IngSoft.IngSoft_TF, fattore);
         uint256 EvidenceProb_TT = EvidenceProb(_student, prob.prob_IDCERT.IDCERT_TT, prob.prob_CorsoPy.CorsoPy_TT, prob.prob_FondInfo.FondInfo_TT, prob.prob_IngSoft.IngSoft_TT, fattore);
      
-       // calculate_apostProb: legge dal mapping per-studente
+        // calculate_apostProb: legge dal mapping per-studente
         uint256 BasiProb = student_prior_BasiProg[_student];
         uint256 ProgPy   = student_prior_ProgPy[_student];
 
@@ -250,13 +250,13 @@ contract Contract_bn is AccessControl {
     }
 
     function get_apriorInfoFacts(address _student, uint8 _fact_ID)
-    external view onlyRole(Azienda) returns (uint16)
-{
-    require(isSystemInitialized, "Sistema non inizializzato");
-    if (_fact_ID == 1) return student_prior_BasiProg[_student];
-    if (_fact_ID == 2) return student_prior_ProgPy[_student];
-    return 0;
-}
+        external view onlyRole(Azienda) returns (uint16)
+    {
+        require(isSystemInitialized, "Sistema non inizializzato");
+        if (_fact_ID == 1) return student_prior_BasiProg[_student];
+        if (_fact_ID == 2) return student_prior_ProgPy[_student];
+        return 0;
+    }
 
     function get_apostInfoFacts(address _student, uint8 _fact_ID)
         external view

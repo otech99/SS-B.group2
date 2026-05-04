@@ -46,9 +46,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         editable=False,
     )
     
-    # 🔹 NUOVO CAMPO: Serve per mappare student1 -> s1, student2 -> s2, ecc.
-    # Sarà null per Admin, Azienda e Authority.
+    
     student_index = models.PositiveIntegerField(null=True, blank=True, help_text="Indice per i file JSON (es. 1 per s1)")
+
+    wallet_address = models.CharField(max_length=42, unique=True, null=True, blank=True, help_text="Indirizzo del wallet Ethereum/MetaMask")
 
     is_active  = models.BooleanField(default=True)
     is_staff   = models.BooleanField(default=False)

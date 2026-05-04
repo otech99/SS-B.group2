@@ -103,3 +103,35 @@ EMAIL_USE_TLS      = True
 EMAIL_HOST_USER    = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD= os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# ── Configurazione Blockchain ────────────────────────────────
+# URL di Ganache (Assicurati che coincida con la porta del tuo terminale)
+BLOCKCHAIN_NODE_URL = os.environ.get('BLOCKCHAIN_NODE_URL', 'http://127.0.0.1:8546')
+ADMIN_PRIVATE_KEY = os.environ.get('PRIVATE_KEY_Admin')
+ENTE_PRIVATE_KEY  = os.environ.get('PRIVATE_KEY_EnteCert')
+AZIENDA_PRIVATE_KEY = os.environ.get('PRIVATE_KEY_Azienda')
+
+# 1. Caricamento ABI (Indispensabile per far parlare MetaMask con il contratto)
+import json
+ABI_PATH = BASE_DIR / 'blockchain' / 'build' / 'contracts' / 'Contract_bn.json'
+BLOCKCHAIN_CONTRACT_ABI = None
+
+if ABI_PATH.exists():
+    try:
+        with open(ABI_PATH, 'r') as f:
+            BLOCKCHAIN_CONTRACT_ABI = json.load(f).get('abi')
+    except Exception as e:
+        print(f"⚠️ Errore nel caricamento ABI: {e}")
+
+# 2. Recupero Indirizzo Contratto
+# Proviamo a leggerlo dal file generato dal deploy, altrimenti usiamo il fallback
+ADDR_JSON_PATH = BASE_DIR / 'blockchain' / 'contract_address.json'
+if ADDR_JSON_PATH.exists():
+    try:
+        with open(ADDR_JSON_PATH, 'r') as f:
+            BLOCKCHAIN_CONTRACT_ADDRESS = json.load(f).get('address')
+    except Exception:
+        BLOCKCHAIN_CONTRACT_ADDRESS = "0x6587e9A33D2C633D6fE060867660C92898e28B1A" # Fallback
+else:
+    # Se il file non esiste ancora, mettiamo l'ultimo indirizzo noto
+    BLOCKCHAIN_CONTRACT_ADDRESS = "0x6587e9A33D2C633D6fE060867660C92898e28B1A"
+

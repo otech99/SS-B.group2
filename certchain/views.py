@@ -9,7 +9,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import CustomUser, OTPToken
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from web3 import Web3
+import random
+from django.db.models import Max
+from django.shortcuts import get_object_or_404
 # ── Helper ────────────────────────────────────────────────────
 
 def _get_user_role(user):
@@ -231,17 +236,27 @@ def dashboard_student(request):
     if not request.user.is_student():
         return redirect('home')
 
-    # 1. Recuperiamo l'indice e il NOME dello studente
+    # 1. Recuperiamo l'indice e i dati base dello studente
     student_id = request.user.student_index if request.user.student_index else 1
     student_name = request.user.username
+    
+    # 2. Recupero Indirizzo Contratto Dinamico dal JSON di Brownie
+    addr_path = os.path.join(settings.BASE_DIR, 'blockchain', 'contract_address.json')
+    contract_address = ""
+    if os.path.exists(addr_path):
+        try:
+            with open(addr_path, 'r') as f:
+                contract_address = json.load(f).get('address', "")
+        except Exception as e:
+            print(f"Errore lettura contract_address.json: {e}")
+
     try:
-        # 2. Percorsi dei file JSON
+        # 3. Percorsi dei file JSON per i dati
         base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
         cv_path = os.path.join(base_path, f'cv_inserito_s{student_id}.json')
-        # Usiamo il file delle evidenze ufficiali per la tabella progressi
         evidenze_path = os.path.join(base_path, f'Evidenze_s{student_id}.json')
 
-        # 3. Lettura del CV scelto
+        # Lettura CV
         cv_scelto = "Dati non disponibili"
         if os.path.exists(cv_path):
             with open(cv_path, 'r') as f:
@@ -249,52 +264,58 @@ def dashboard_student(request):
                 cv_val = cv_data.get('CV', 1) 
                 cv_scelto = "Percorso Informatico" if cv_val == 1 else "Percorso Elettronico"
 
-        # 4. Lettura delle evidenze (esami)
+        # Lettura evidenze (esami)
         valori_esiti = [0, 0, 0, 0]
         if os.path.exists(evidenze_path):
             with open(evidenze_path, 'r') as f:
-                evidenze_data = json.load(f)
-                valori_esiti = evidenze_data.get('Evidenze', [0, 0, 0, 0])
+                valori_esiti = json.load(f).get('Evidenze', [0, 0, 0, 0])
         
         nomi_esami = ["IDCERT Coding", "Corso Python", "Fondamenti Info", "Ingegneria Soft"]
-        # Trasformiamo in list perché zip() è un iteratore consumabile una sola volta
         evidenze_list = list(zip(nomi_esami, valori_esiti))
 
-        # 5. Recupero Stato Reale dalla Blockchain
-        state = "IDLE" 
-        blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
-        
-        result = subprocess.run(
-            ["brownie", "run", "scripts/Role_based_txn.py", "main", "GetState", str(student_id), "--network", "ganache-local"],
-            cwd=blockchain_path,
-            capture_output=True,
-            text=True,
-            env=os.environ.copy()
-        )
+        # 4. Stato Blockchain tramite Web3
+        state = "IDLE"
+        student_wallet = getattr(request.user, 'wallet_address', None)
 
-        state_mapping = {
-            "0": "EVIDENCE NOT DECLARED",
-            "1": "EVIDENCE_DECLARED",
-            "2": "EVIDENCE_VERIFIED",
-            "3": "READY_FOR_CALC",
-            "4": "VALIDATO"
-        }
-
-        # Estrazione robusta: cerchiamo tra tutte le righe dell'output
-        if result.returncode == 0:
-            for line in result.stdout.splitlines():
-                if "RAW_STATE:" in line:
-                    raw_val = line.split("RAW_STATE:")[1].strip().split()[0]
-                    state = state_mapping.get(raw_val, "UNKNOWN")
-                    break
+        if not student_wallet:
+            state = "WALLET_NOT_CONNECTED"
         else:
-            print(f"BROWNIE ERROR: {result.stderr}")
-            state = "BLOCKCHAIN_ERROR"
+            contract = get_blockchain_contract() 
+            if contract:
+                try:
+                    # Importiamo Web3 qui per evitare l'errore di "local variable"
+                    from web3 import Web3
+                    
+                    clean_address = student_wallet.strip()
+                    
+                    # Usiamo il metodo più compatibile per il checksum
+                    if hasattr(Web3, 'to_checksum_address'):
+                        checksum_address = Web3.to_checksum_address(clean_address)
+                    else:
+                        # Fallback per versioni Web3.py più vecchie
+                        w3_temp = Web3()
+                        checksum_address = w3_temp.toChecksumAddress(clean_address)
+                    
+                    # Chiamata al contratto
+                    raw_state = contract.functions.studentState(checksum_address).call()
+                    
+                    state_mapping = {
+                        0: "IDLE",
+                        1: "DICHIARATO",
+                        2: "VALIDATO",
+                        3: "CALCOLO...",
+                        4: "COMPLETATO"
+                    }
+                    state = state_mapping.get(int(raw_state), f"SCONOSCIUTO ({raw_state})")
+                    print(f"✅ Successo! Stato letto: {raw_state}")
 
+                except Exception as e:
+                    print(f"❌ ERRORE CHIAMATA CONTRATTO: {e}")
+                    state = "BLOCKCHAIN_ERROR"
+            else:
+                state = "BLOCKCHAIN_CONNECTION_FAILED"
     except Exception as e:
-        print(f"Errore critico dashboard_student: {e}")
-        cv_scelto = "Errore Caricamento"
-        evidenze_list = []
+        print(f"Errore critico: {e}")
         state = "ERROR"
 
     context = {
@@ -303,80 +324,73 @@ def dashboard_student(request):
         'cv_scelto': cv_scelto,     
         'evidenze': evidenze_list,
         'state': state,
-        # Valori singoli per i checkbox del secondo form
         'idcert_val': valori_esiti[0],
         'corsopy_val': valori_esiti[1],
         'fondinfo_val': valori_esiti[2],
         'ingsoft_val': valori_esiti[3],
+        # Dati per MetaMask
+        'contract_address': contract_address,
+        'contract_abi': json.dumps(settings.BLOCKCHAIN_CONTRACT_ABI), 
     }
     
     return render(request, 'certchain/dashboard_student.html', context)
 @login_required
 def dashboard_company(request):
-    """
-    Dashboard per l'azienda che interroga direttamente la Blockchain 
-    tramite Brownie per verificare lo stato reale dei candidati.
-    """
-    # 1. Controllo sicurezza ruolo: solo le aziende possono accedere
     if request.user.role != 'COMPANY':
         return redirect('home')
 
-    # 2. Recuperiamo gli studenti che hanno un ID assegnato nel sistema
     studenti_db = CustomUser.objects.filter(role='STUDENT').exclude(student_index__isnull=True)
-    
     studenti_con_dati_onchain = []
 
     for s in studenti_db:
-        # Inizializziamo i valori di default per evitare errori nel template
-        s.onchain_state = 0   # 0 = In Attesa, 2 = Validato
+        s.onchain_state = 0   
         s.onchain_prior = 0
         s.onchain_apost = 0
 
         try:
-            # 3. Esecuzione dello script Brownie in modalità sola lettura (Azienda)
-            # Passiamo l'indice dello studente come argomento
+            # FIX 1: Cambiato network in ganache-8546
+            # FIX 2: Aumentato timeout a 40 secondi
             result = subprocess.run(
-                ["brownie", "run", "scripts/Role_based_txn.py", "main", "Azienda", str(s.student_index), "--network", "ganache-local"],
+                ["brownie", "run", "scripts/Role_based_txn.py", "main", "Azienda", str(s.student_index), "--network", "ganache-8546"],
                 cwd="/home/otmane/SS-B-G2/blockchain",
                 capture_output=True, 
                 text=True,
-                timeout=15
+                timeout=40 
             )
 
             output = result.stdout
-            
-            # 4. Parsing dell'output dello script
-            # Cerchiamo le righe stampate da Brownie e convertiamo i decimali in percentuali
+            # DEBUG: Vediamo cosa risponde Brownie nel terminale Django
+            print(f"--- DEBUG AZIENDA PER {s.username} ---")
+            print(output)
+
             for line in output.splitlines():
-                if "A Priori" in line and ":" in line:
+                # Il parsing deve essere molto preciso
+                if "A Priori" in line:
                     try:
-                        val_str = line.split(":")[1].strip()
+                        # Gestisce formati tipo "A Priori: 0.75" o "A Priori (CV): 0.75"
+                        val_str = line.split(":")[-1].strip()
                         s.onchain_prior = int(float(val_str) * 100)
-                    except ValueError:
+                    except (ValueError, IndexError):
                         pass
                 
-                if "A Posteriori" in line and ":" in line:
+                if "A Posteriori" in line:
                     try:
-                        val_str = line.split(":")[1].strip()
+                        val_str = line.split(":")[-1].strip()
                         s.onchain_apost = int(float(val_str) * 100)
-                    except ValueError:
+                    except (ValueError, IndexError):
                         pass
 
-            # 5. Logica a 2 Stati semplificata
-            # Consideriamo lo studente VALIDATO (2) solo se esiste un valore on-chain calcolato
+            # Stato basato sulla presenza di dati a posteriori
             if s.onchain_apost > 0:
                 s.onchain_state = 2
             else:
                 s.onchain_state = 0
 
         except Exception as e:
-            # Log degli errori nel terminale per il debug, ma la pagina continua a caricare
             print(f"--- Errore lettura Blockchain per {s.username}: {e} ---")
         
-        # Aggiungiamo l'oggetto studente arricchito alla lista finale
         studenti_con_dati_onchain.append(s)
 
-    # 6. Invio dei dati al template per la visualizzazione nella tabella
     return render(request, 'certchain/dashboard_company.html', {
         'studenti': studenti_con_dati_onchain,
     })
@@ -395,7 +409,7 @@ def company_view_report(request, student_id):
         # 2. Lanciamo Brownie con l'azione "Azienda"
         # L'azienda non ha bisogno di passare la propria chiave per la lettura pubblica
         result = subprocess.run(
-            ["brownie", "run", script_path, "main", "Azienda", str(student_id), "--network", "ganache-local"],
+            ["brownie", "run", script_path, "main", "Azienda", str(student_id), "--network", "ganache-46"],
             cwd=blockchain_path,
             capture_output=True,
             text=True,
@@ -446,25 +460,32 @@ def deploy_contract(request):
     if request.method == 'POST':
         try:
             blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
-            # Usiamo l'ambiente corrente per passare le API Key e le Private Key
             current_env = os.environ.copy()
 
-            # Indentazione corretta: 12 spazi (o 3 tab) dal margine sinistro
+            # FIX 1: Cambiato "ganache-46" in "ganache-8546"
+            # FIX 2: Aumentato il timeout a 90 secondi per sicurezza
             result = subprocess.run(
-                ["brownie", "run", "scripts/Deploy.py", "--network", "ganache-local"],
+                ["brownie", "run", "scripts/Deploy.py", "--network", "ganache-8546"],
                 cwd=blockchain_path,
                 capture_output=True,
                 text=True,
                 env=current_env,
-                timeout=60
+                timeout=90
             )
+
+            # Stampiamo nel terminale di Django per debug
+            print("--- STDOUT DEPLOY ---")
+            print(result.stdout)
+            print("--- STDERR DEPLOY ---")
+            print(result.stderr)
 
             if result.returncode == 0:
                 messages.success(request, "Smart Contract deployato con successo!")
             else:
                 messages.error(request, f"Errore Brownie: {result.stderr}")
+                
         except subprocess.TimeoutExpired:
-            messages.error(request, "Timeout: Ganache non risponde.")
+            messages.error(request, "Timeout: Ganache non risponde. (La rete era ganache-8546?)")
         except Exception as e:
             messages.error(request, f"Errore di sistema: {str(e)}")
 
@@ -484,12 +505,12 @@ def init_bn(request):
             
             # Lanciamo il processo
             result = subprocess.run(
-                ["brownie", "run", "scripts/Role_based_txn.py", "main", "--network", "ganache-local"],
+                ["brownie", "run", "scripts/Role_based_txn.py", "main", "Admin", "--network", "ganache-8546"], # Aggiunto 'Admin' e porta 8546
                 cwd=blockchain_path,
                 capture_output=True,
                 text=True,
                 env=current_env,
-                timeout=180 # Aumentiamo a 3 min perché le TX sono tante
+                timeout=180 
             )
 
             # Log dell'output nel terminale Django
@@ -520,7 +541,6 @@ def init_bn(request):
         print("--- DEBUG: Fine procedura ---\n")
 
     return redirect('dashboard_admin')
-
 @login_required
 def student_declare(request):
     if not request.user.is_student():
@@ -537,29 +557,18 @@ def student_declare(request):
         ]
 
         try:
+            # 1. Salvataggio JSON locale (Unica cosa che fa Django ora)
             base_path = os.path.join(settings.BASE_DIR, 'data', 'json')
-            # CORRETTO: Aggiunto underscore per coerenza con la dashboard Ente
             evidenze_path = os.path.join(base_path, f'Dichiarazione_s{stud_id}.json')
             
             with open(evidenze_path, 'w') as f:
                 json.dump({"Evidenze": new_evidences}, f, indent=4)
             
-            blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
-            script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
-            
-            # CORRETTO: Aggiunto "main" prima di "Studente"
-            result = subprocess.run(
-                ["brownie", "run", script_path, "main", "Studente", str(stud_id), "--network", "ganache-local"],
-                cwd=blockchain_path, capture_output=True, text=True, env=os.environ.copy()
-            )
-
-            if "confirmed" in result.stdout:
-                messages.success(request, "Dichiarazione inviata con successo alla Blockchain!")
-            else:
-                messages.warning(request, "Dichiarazione salvata, ma verifica lo stato on-chain.")
+            # Se arriviamo qui, significa che MetaMask ha già fatto il lavoro sporco sulla blockchain!
+            messages.success(request, "Dichiarazione inviata e confermata dalla Blockchain!")
 
         except Exception as e:
-            messages.error(request, f"Errore: {str(e)}")
+            messages.error(request, f"Errore nel salvataggio JSON: {str(e)}")
 
     return redirect('dashboard_student')
 @login_required
@@ -570,25 +579,154 @@ def ente_action(request, student_id):
     if request.method == 'POST':
         try:
             blockchain_path = os.path.join(settings.BASE_DIR, 'blockchain')
-            script_path = os.path.join(blockchain_path, 'scripts', 'Role_based_txn.py')
             
-            # Lancio Brownie: Assicurati che l'ordine sia main -> EnteCert -> ID
+            # Prepariamo l'ambiente con le chiavi del .env
+            current_env = os.environ.copy()
+            
+            # Lancio Brownie
             result = subprocess.run(
-                ["brownie", "run", script_path, "main", "EnteCert", str(student_id), "--network", "ganache-local"],
+                ["brownie", "run", "scripts/Role_based_txn.py", "main", "EnteCert", str(student_id), "--network", "ganache-8546"],
                 cwd=blockchain_path,
                 capture_output=True,
                 text=True,
-                env=os.environ.copy()
+                env=current_env  # <--- Fondamentale per leggere le chiavi!
             )
 
             if "confirmed" in result.stdout or "Evidenze inserite" in result.stdout:
-                messages.success(request, f"Validazione e Calcolo completati per lo Studente {student_id}!")
+                messages.success(request, f"Validazione completata per lo Studente {student_id}!")
             else:
-                # DEBUG: Stampiamo l'errore nel terminale per capire se è un Revert
-                print(f"BROWNIE ERROR: {result.stderr}")
-                messages.error(request, f"Errore Blockchain: {result.stderr if result.stderr else 'Transazione fallita'}")
+                messages.error(request, f"Errore: {result.stderr}")
         
         except Exception as e:
             messages.error(request, f"Errore di sistema: {str(e)}")
 
     return redirect('dashboard_entecert')
+#METAMASK
+@login_required
+@require_POST
+def update_wallet_address(request):
+    """Riceve l'indirizzo da MetaMask e lo salva nel DB per l'utente corrente."""
+    try:
+        # Legge i dati inviati da JavaScript
+        data = json.loads(request.body)
+        wallet = data.get('wallet_address')
+        
+        if wallet:
+            # Salva nel database
+            request.user.wallet_address = wallet
+            request.user.save()
+            return JsonResponse({'status': 'success', 'message': 'Wallet salvato!'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Nessun wallet fornito'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+def get_blockchain_contract():
+    from web3 import Web3
+    import os
+    import json
+    from django.conf import settings
+    
+    w3 = Web3(Web3.HTTPProvider(settings.BLOCKCHAIN_NODE_URL))
+    
+    # 1. Test connessione
+    connected = False
+    try:
+        connected = w3.is_connected()
+    except AttributeError:
+        connected = w3.isConnected()
+
+    if not connected:
+        print(f"❌ Nodo non raggiungibile su {settings.BLOCKCHAIN_NODE_URL}")
+        return None
+
+    # FIX: Leggiamo l'indirizzo dinamicamente dal JSON, non dal settings!
+    addr_path = os.path.join(settings.BASE_DIR, 'blockchain', 'contract_address.json')
+    addr = None
+    if os.path.exists(addr_path):
+        try:
+            with open(addr_path, 'r') as f:
+                addr = json.load(f).get('address')
+        except Exception as e:
+            print(f"Errore lettura JSON address: {e}")
+
+    abi = settings.BLOCKCHAIN_CONTRACT_ABI
+
+    if not addr or not abi:
+        print("❌ Indirizzo o ABI mancante")
+        return None
+
+    try:
+        if hasattr(Web3, 'to_checksum_address'):
+            target_address = Web3.to_checksum_address(addr)
+        else:
+            target_address = w3.toChecksumAddress(addr)
+            
+        return w3.eth.contract(address=target_address, abi=abi)
+    
+    except Exception as e:
+        print(f"DEBUG ERROR: Fallita creazione contratto: {e}")
+        return None
+def register_student(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        # 1. Calcolo student_index
+        max_idx = CustomUser.objects.filter(role='STUDENT').aggregate(Max('student_index'))['student_index__max']
+        new_index = (max_idx + 1) if max_idx is not None else 1
+
+        try:
+            # 2. Creazione Utente
+            user = CustomUser.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                role=CustomUser.Role.STUDENT,
+                student_index=new_index
+            )
+
+            # 3. GENERAZIONE AUTOMATICA FILE JSON
+            generate_student_json_files(new_index)
+
+            return redirect('login')
+        except Exception as e:
+            print(f"Errore: {e}")
+            
+    return render(request, 'certchain/register.html')
+
+def generate_student_json_files(student_index):
+    """Genera i file JSON necessari per la Rete Bayesiana con dati standard/random."""
+    
+    # Percorso della cartella json (assicurati che esista!)
+    json_folder = os.path.join(settings.BASE_DIR, 'data', 'json')
+    if not os.path.exists(json_folder):
+        os.makedirs(json_folder)
+
+    # --- File 1: cv_inserito_sX.json ---
+    # Scegliamo a caso tra 1 (Informatico) e 2 (Elettronico)
+    import random
+    tipo_cv = random.choice([1, 2])
+    cv_data = {"CV": tipo_cv}
+    
+    cv_path = os.path.join(json_folder, f'cv_inserito_s{student_index}.json')
+    with open(cv_path, 'w') as f:
+        json.dump(cv_data, f, indent=4)
+
+    # --- File 2: Evidenze_sX.json ---
+    # Generiamo evidenze casuali (Superato/Non Superato)
+    # 1 = Superato, 0 = Non Superato
+    evidenze_data = {
+        "Evidenze": [
+            random.choice([0, 1]), # IDCERT Coding
+            random.choice([0, 1]), # Corso Python
+            random.choice([0, 1]), # Fondamenti Info
+            random.choice([0, 1])  # Ingegneria Soft
+        ]
+    }
+    
+    evidenze_path = os.path.join(json_folder, f'Evidenze_s{student_index}.json')
+    with open(evidenze_path, 'w') as f:
+        json.dump(evidenze_data, f, indent=4)
+
+    print(f"File generati correttamente per lo studente {student_index}")

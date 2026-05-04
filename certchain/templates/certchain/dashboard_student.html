@@ -32,6 +32,9 @@
     </div>
     <div class="nav-user">
         <span class="font-mono">STUDENTE S{{ student_id }}</span>
+        <button id="connectWalletBtn" onclick="connectWallet()" style="background: #eab308; color: white; margin-left: 15px; padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: all 0.3s ease;">
+            🦊 Connetti Wallet
+        </button>
         <a href="{% url 'logout' %}" class="btn-nav danger" style="background: #b91c1c; margin-left:15px; text-decoration: none; color: white; padding: 8px 15px; border-radius: 6px;">Logout</a>
     </div>
 </nav>
@@ -104,7 +107,7 @@
                 devi confermare la tua partecipazione al processo di certificazione.
             </p>
 
-            <form method="POST" action="{% url 'student_declare' %}">
+            <form method="POST" action="{% url 'student_declare' %}" id="declare-form">
     {% csrf_token %}
     <div class="form-card" style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -144,7 +147,7 @@
     </div>
 
     <div class="declaration-card">
-        <button type="submit" class="btn-primary">Invia Dichiarazione Aggiornata</button>
+        <button type="button" class="btn-primary" onclick="signWithMetaMask(event)">Invia Dichiarazione Aggiornata</button>
     </div>
 </form>
         </div>
@@ -159,6 +162,92 @@
         </p>
     </div>
 </footer>
+<!-- INIZIO SCRIPT METAMASK -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script>
+    // 1. Funzione per connettere il wallet e salvarlo nel DB Django
+    async function connectWallet() {
+        if (typeof window.ethereum !== 'undefined') {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const userAddress = accounts[0];
+                
+                const shortAddress = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+                const btn = document.getElementById('connectWalletBtn');
+                btn.innerText = '✅ ' + shortAddress;
+                btn.style.background = '#166534';
 
+                // Invio al backend per aggiornare CustomUser.wallet_address
+                fetch("{% url 'update_wallet' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ wallet_address: userAddress })
+                });
+                
+                console.log("Wallet salvato:", userAddress);
+            } catch (error) {
+                console.error("Connessione fallita:", error);
+            }
+        } else {
+            alert("Per favore installa MetaMask!");
+        }
+    }
+
+    // 2. Funzione per la firma on-chain e invio form
+    async function signWithMetaMask(event) {
+        event.preventDefault(); // Blocca l'invio del form Django
+
+        if (typeof window.ethereum === 'undefined') {
+            alert("MetaMask non rilevato!");
+            return;
+        }
+
+        const btn = event.target;
+        const originalText = btn.innerText;
+
+        try {
+            btn.innerText = "⏳ Firma in corso...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+
+            // Recupero variabili passate da Django
+            const contractAddress = "{{ contract_address }}";
+            const contractAbi = JSON.parse('{{ contract_abi|safe }}');
+
+            if (!contractAddress || contractAddress === "") {
+                throw new Error("Indirizzo contratto non disponibile. Fai il deploy!");
+            }
+
+            const contract = new ethers.Contract(contractAddress, contractAbi, signer);
+
+            // Chiamata allo Smart Contract
+            console.log("Richiesta firma a MetaMask...");
+            const tx = await contract.studentDeclaredEvidence();
+            
+            btn.innerText = "⏳ Conferma Blockchain...";
+            await tx.wait(); // Aspetta che la transazione sia minata
+
+            console.log("Transazione confermata! Invio dati al server...");
+            
+            // Solo ora inviamo il form a Django per salvare i file JSON locali
+            document.getElementById("declare-form").submit();
+
+        } catch (error) {
+            console.error("Errore transazione:", error);
+            alert("Errore durante la firma: " + (error.data?.message || error.message));
+            
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+    }
+</script>
+<!-- FINE SCRIPT METAMASK -->
 </body>
 </html>

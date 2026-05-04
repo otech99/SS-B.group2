@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registrati — CertChain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'certchain/css/style.css' %}">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="{% url 'home' %}" class="nav-logo" style="text-decoration:none;">
+       <div class="nav-logo">
+        <img src="{% static 'certchain/img/logo.png' %}" class="nav-logo-img">
+    </div>
+    </a>
+  </nav>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="section-label">Registrazione Studente</div>
+      <h1 class="login-title">Crea Account</h1>
+      <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+        Registrati per iniziare a certificare le tue competenze.
+      </p>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert-error" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: #28a745;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" action="{% url 'register_student' %}" class="login-form">
+        {% csrf_token %}
+        
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username"
+                 placeholder="Scegli un username" required autofocus/>
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email"
+                 placeholder="tua@email.it" required/>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password"
+                 placeholder="••••••••" required/>
+        </div>
+
+        <button type="submit" class="btn-primary btn-full" style="background: #28a745;">Crea Account</button>
+      </form>
+
+      <p class="login-back" style="margin-top: 1rem;">
+        Hai già un account? <a href="{% url 'login' %}" style="color: var(--accent);">Accedi</a>
+      </p>
+      
+      <p class="login-back">
+        <a href="{% url 'home' %}">← Torna alla home</a>
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>
