@@ -1,5 +1,15 @@
-# Dockerfile.django
-FROM python:3.12-slim
+# Usiamo la stessa versione del tuo venv per garantire la massima stabilità
+FROM python:3.9-slim
+
+# Evita la creazione di file .pyc e mostra i log in tempo reale
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Installa i compilatori necessari per le librerie crittografiche e Web3
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Imposta la directory di lavoro
 WORKDIR /app
@@ -8,12 +18,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia il progetto
+# Copia il resto del progetto
 COPY . .
+
+# Rendi eseguibile lo script di avvio (che creeremo tra poco)
+RUN chmod +x entrypoint.sh
 
 # Espone la porta Django
 EXPOSE 8000
 
-# Avvia il server Django
-
-CMD ["python", "manage.py", "runserver", "--noreload", "0.0.0.0:8000"]
+# Avvia lo script che gestirà Brownie e poi Django
+CMD ["./entrypoint.sh"]

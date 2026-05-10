@@ -1,46 +1,40 @@
+version: '3.8'
+
 services:
 
-  # ── Django backend ──────────────────────────────────────────
-  django:
-    build:
-      context: .
-      dockerfile: Dockerfile.django
-    container_name: certchain_django
+  # ── 1. Nodo Blockchain Locale (Ganache) ─────────────────────
+  ganache:
+    image: trufflesuite/ganache:latest
+    container_name: certchain_ganache
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - "8545:8545"
+    # Avvia Ganache in modo deterministico sulla porta corretta
+    command: ["--host", "0.0.0.0", "--port", "8546", "--networkId", "1337", "--deterministic"]
     networks:
       - certchain_net
     restart: unless-stopped
 
-  # ── Hyperledger Besu (nodo privato) ─────────────────────────
-  # besu: commentato fino a configurazione genesis.json
-  # besu:
-  #   image: hyperledger/besu:latest
-  #   container_name: certchain_besu
-  #   ports:
-  #     - "8545:8545"
-  #     - "8546:8546"
-  #     - "30303:30303"
-  #   volumes:
-  #     - ./blockchain/besu-config:/config
-  #     - besu_data:/data
-  #   command: >
-  #     --config-file=/config/config.toml
-  #     --data-path=/data
-  #     --rpc-http-enabled
-  #     --rpc-http-host=0.0.0.0
-  #     --rpc-http-port=8545
-  #     --rpc-http-cors-origins=*
-  #     --rpc-http-api=ETH,NET,WEB3,TXPOOL
-  #     --host-allowlist=*
-  #     --network-id=1337
-  #   networks:
-  #     - certchain_net
-  #   restart: unless-stopped
+  # ── 2. Django Backend & Brownie ─────────────────────────────
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.django # Assicurati che il file si chiami così!
+    container_name: certchain_django
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app  # FONDAMENTALE: Sincronizza il tuo codice locale con il container
+    env_file:
+      - .env
+    environment:
+      # Sovrascriviamo l'URL in modo che Brownie/Django puntino al container Ganache
+      - BLOCKCHAIN_NODE_URL=http://ganache:8546
+    depends_on:
+      - ganache # Django si avvia solo DOPO che Ganache è acceso
+    networks:
+      - certchain_net
+    restart: unless-stopped
+
 networks:
   certchain_net:
     driver: bridge
-
-
