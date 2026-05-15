@@ -118,9 +118,7 @@ def dashboard(request):
     return _redirect_by_role(request.user)
 @login_required
 def dashboard_admin(request):
-    """
-    Dashboard principale per l'Admin con caricamento dinamico dei CV dai file JSON.
-    """
+    
     if not request.user.is_admin():
         return redirect('home')
 

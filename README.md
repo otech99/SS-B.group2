@@ -1,56 +1,48 @@
-# SS-B.group2
-Progetto di software security and blockchain : oracolo delle reti bayesiane
-# git pull (da fare sempre prima del resto) per aggiornare le modifiche già fatte da altri
-# "git add ." per tutto o "git add nome_file" 
-# git commit -m "messaggio"
-# git push
+# 🎓 CertChain: Sistema di Certificazione Decentralizzata Ibrido
 
-Pipx install eth-brownie (per configurare il framework brownie) 
+CertChain è un Proof of Concept (PoC) per la gestione, l'emissione e la verifica di certificati digitali. Il progetto implementa un'architettura **Defense in Depth** che combina la robustezza del Web2 (Django) con l'immutabilità del Web3 (Ethereum/Solidity) per garantire l'integrità dei dati e la non ripudiabilità delle certificazioni.
 
-Per installare e usare solhint (per analizzare la sicurezza dei contratti):
-Installation
-You can install Solhint using npm:
+---
 
-npm install -g solhint
+## 🏗 Architettura di Sistema (4 Layer)
 
-verify that it was installed correctly:
-solhint --version
+Il sistema è stato progettato seguendo il principio della separazione delle responsabilità:
 
-Usage
-First initialize a configuration file, if you don’t have one:
+1.  **Client Layer:** Interfaccia utente e firma crittografica delle transazioni tramite **MetaMask**.
+2.  **Backend Layer:** Logica applicativa, gestione API REST (**Django**), RBAC off-chain e motore di inferenza.
+3.  **Smart Contract Layer:** Logica decentralizzata, enforcement dei ruoli tramite **OpenZeppelin** e registro immutabile.
+4.  **Infrastructure Layer:** Ambiente isolato e containerizzato tramite **Docker** che ospita il nodo **Ganache** e i servizi backend.
 
-solhint --init
-This will create a .solhint.json file with the recommended rules enabled. Then run Solhint with one or more Globs as arguments. For example, to lint all files inside contracts directory, you can do:
+---
 
-solhint 'contracts/**/*.sol'
-To lint a single file:
+## 🛡️ Caratteristiche di Sicurezza
+* **RBAC Dual-Layer:** Controllo degli accessi implementato sia a livello di viste Django (Off-Chain) che a livello di Smart Contract (On-Chain).
+* **Firma Asimmetrica:** Le transazioni critiche sono firmate localmente dall'utente tramite chiave privata, senza mai esporre le credenziali al server.
+* **Isolamento Runtime:** L'intera infrastruttura è segregata in container Docker per limitare la superficie di attacco.
+* **Fail-Safe Defaults:** Ogni rotta non riconosciuta o tentativo di escalation viene reindirizzato automaticamente verso risorse sicure.
 
-solhint contracts/MyToken.sol
-Run solhint without arguments to get more information:
+---
 
-Usage: solhint [options] <file> [...other_files]
+## 📋 Prerequisiti
 
-Linter for Solidity programming language
+Prima di iniziare, assicurati di avere installato:
+* [Docker](https://www.docker.com/products/docker-desktop/) e Docker Compose.
+* L'estensione [MetaMask](https://metamask.io/) nel tuo browser.
+* **Ganache** (Se non utilizzi la versione containerizzata nel docker-compose). port 8546
 
-Options:
+---
 
-  -V, --version                           output the version number
-  -f, --formatter [name]                  report formatter name (stylish, table, tap, unix, json, compact, sarif)
-  -w, --max-warnings [maxWarningsNumber]  number of allowed warnings, works in quiet mode as well
-  -c, --config [file_name]                file to use as your rules configuration file (not compatible with multiple configs)
-  -q, --quiet                             report errors only - default: false
-  --ignore-path [file_name]               file to use as your .solhintignore
-  --fix                                   automatically fix problems and show report
-  --cache                                 only lint files that changed since last run
-  --cache-location                        path to the cache file
-  --noPrompt                              do not suggest to backup files when any `fix` option is selected
-  --init                                  create configuration file for solhint
-  --disc                                  do not check for solhint updates
-  --save                                  save report to file on current folder
-  --noPoster                              remove discord poster
-  -h, --help                              output usage information
+## 🚀 Installazione e Avvio
 
-Commands:
+Segui questi passaggi per configurare l'ambiente di test:
 
-  stdin [options]                         linting of source code data provided to STDIN
-  list-rules                              display covered rules of current .solhint.json
+### 1. Clonazione del Repository
+```bash
+git clone <url-del-tuo-repository>
+cd <nome-cartella-progetto>
+
+## Creazione file .env
+cp .env.example .env
+
+##Avvio dell'Infrastruttura Docker
+docker-compose up --build

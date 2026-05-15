@@ -70,7 +70,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def is_student(self):
         return self.role == self.Role.STUDENT
     
-    def is_company(self): # <--- Aggiunto metodo per Azienda
+    def is_company(self): 
         return self.role == self.Role.COMPANY
 
     def __str__(self):
